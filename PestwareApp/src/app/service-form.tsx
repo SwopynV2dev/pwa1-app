@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Image, Modal, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import Signature from 'react-native-signature-canvas';
 
 
 export default function ServiceForm() {
@@ -73,9 +74,14 @@ const serviceFormData = {
     const paymentMethodOptions = ['Efectivo', 'Transferencia', 'Cheque'];
     const paymentTypeOptions = ['Contado', 'A meses'];
 
-    //Firma
+    //Fotos
     const [clientPhotos, setClientPhotos] = useState<string[]>([]);
     const [showClientPhotos, setShowClientPhotos] = useState(false);
+
+    //Firmas
+    const [signature, setSignature] = useState<string | null>(null);
+    const [showSignaturePad, setShowSignaturePad] = useState(false);
+    const signatureRef = useRef<any>(null);
 
     //Condiciones del lugar
     const togglePlague = (plague: string) => {
@@ -782,7 +788,67 @@ const serviceFormData = {
                             </Text>
                             </View>
 
-                            <View style={styles.signatureArea} />
+                            <TouchableOpacity
+                                style={styles.signatureArea}
+                                onPress={() => setShowSignaturePad(true)}
+                            >
+                            {signature ? (
+                                <Image
+                                    source={{ uri: signature }}
+                                    style={styles.signatureImage}
+                                    resizeMode="contain"
+                                />
+                            ) : (
+                                <Text style={styles.signaturePlaceholder}>
+                                    Toca aquí para firmar
+                                </Text>
+                            )}
+                        </TouchableOpacity>
+
+                        <Modal
+                            visible={showSignaturePad}
+                            animationType="slide"
+                        >
+                            <View style={styles.signatureModalContainer}>
+                                <Signature
+                                    ref={signatureRef}
+                                    onOK={(signatureData) => {
+                                        setSignature(signatureData);
+                                        setShowSignaturePad(false);
+                                    }}
+                                    onEmpty={() => alert('Primero realiza una firma')}
+                                    descriptionText=""
+                                    clearText=""
+                                    confirmText=""
+                                    webStyle={`
+                                        .m-signature-pad {
+                                            box-shadow: none;
+                                            border: none;
+                                        }
+
+                                        .m-signature-pad--footer {
+                                            display: none;
+                                        }
+                                    `}
+                                />
+
+                                <View style={styles.signatureButtonsRow}>
+                                    <TouchableOpacity
+                                        style={styles.cancelSignatureButton}
+                                        onPress={() => setShowSignaturePad(false)}
+                                    >
+                                        <Text style={styles.cancelSignatureText}>Cancelar</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={styles.doneSignatureButton}
+                                        onPress={() => signatureRef.current?.readSignature()}
+                                    >
+                                        <Text style={styles.doneSignatureText}>Listo</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </Modal>
 
                             <View style={styles.clientRow}>
                             <MaterialIcons
@@ -807,16 +873,23 @@ const serviceFormData = {
                             </Text>
 
                             <TouchableOpacity
-                            style={styles.saveSectionButton}
-                            onPress={() => {
-                                if (!completedSections.includes(section.id)) {
-                                setCompletedSections([
-                                    ...completedSections,
-                                    section.id,
-                                ]);
-                                }
-                                alert('Firma del cliente guardada')
-                            }}
+                                style={styles.saveSectionButton}
+                                onPress={() => {
+
+                                    if (!signature) {
+                                        alert('Primero realiza la firma');
+                                        return;
+                                    }
+
+                                    if (!completedSections.includes(section.id)) {
+                                        setCompletedSections([
+                                            ...completedSections,
+                                            section.id,
+                                        ]);
+                                    }
+
+                                    alert('Firma guardada');
+                                }}
                             >
                             <MaterialIcons
                                 name="keyboard-arrow-down"
@@ -830,7 +903,7 @@ const serviceFormData = {
                             </TouchableOpacity>
 
                         </View>
-                        )}
+                    )}
                 </View>
             );
         })}
@@ -1186,9 +1259,15 @@ const serviceFormData = {
     },
 
     signatureArea: {
-    height: 140,
-    borderWidth: 2,
-    borderColor: '#2094C9',
+    width: '100%',
+    height: 180,
+    borderWidth: 1,
+    borderColor: '#CCCCCC',
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 15,
     marginBottom: 15,
     },
 
@@ -1287,5 +1366,60 @@ const serviceFormData = {
     flex: 1,
     fontSize: 16,
     color: '#444444',
+    },
+
+    signaturePlaceholder: {
+        color: '#888888',
+        fontSize: 16,
+    },
+
+    signatureImage: {
+        width: '100%',
+        height: '100%',
+    },
+
+    signaturePadContainer: {
+        width: '100%',
+        height: 350,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 10,
+        overflow: 'hidden',
+        marginBottom: 15,
+    },
+
+    cancelSignatureButton: {
+    flex: 1,
+    backgroundColor: '#CCCCCC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    },
+
+    cancelSignatureText: {
+        color: '#333333',
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+
+    signatureModalContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    },
+
+    signatureButtonsRow: {
+    flexDirection: 'row',
+    height: 70,
+    },
+
+    doneSignatureButton: {
+    flex: 1,
+    backgroundColor: '#2094C9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    },
+
+    doneSignatureText: {
+        color: '#FFFFFF',
+        fontSize: 18,
+        fontWeight: 'bold',
     },
 });
