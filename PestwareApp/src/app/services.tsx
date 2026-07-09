@@ -5,12 +5,38 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useState } from 'react';
 
 export default function Services() {
-    const [selectedDay, setSelectedDay] = useState('Hoy');
+    const [selectedDate, setSelectedDate] = useState(new Date());
+
+    const monthNames = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+
+    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+    const getWeekDays = (date: Date) => {
+        const startOfWeek = new Date(date);
+        startOfWeek.setDate(date.getDate() - date.getDay());
+
+        return Array.from({ length: 7 }, (_, index) => {
+            const currentDate = new Date(startOfWeek);
+            currentDate.setDate(startOfWeek.getDate() + index);
+
+            return {
+                fullDate: currentDate,
+                dayName: dayNames[currentDate.getDay()],
+                dayNumber: currentDate.getDate(),
+            };
+        });
+    };
+
+const days = getWeekDays(selectedDate);
 
 const services = [
     {
         id: 1,
-        date: 'Jun 02',
+        fullDate: '2026-06-11T17:00:00',
+        date: 'Jun 11',
         time: '04:00 am',
         title: 'Hotel Santorini Casa Blanca - Servicio MIPU',
         phone: '3176000359',
@@ -18,61 +44,148 @@ const services = [
         type: 'MIPU',
         status: 'Finalizado',
         paymentStatus: 'Pagado',
-        },
-        {
+    },
+    {
         id: 2,
-        date: 'Jun 02',
-        time: '09:00 am',
-        title: 'RM Chinook - Servicio de Desinsectación',
-        phone: '301727048',
-        address: 'Carrera 4 Calle 26, Prado',
-        type: 'DES',
-        status: 'Finalizado',
-        paymentStatus: 'Pagado',
-        },
-    ];
+        fullDate: '2026-06-18T07:00:00',
+        date: 'Jun 18',
+        time: '07:00 am',
+        title: 'Santa Marta Marriott Resort Playa Dormida - Servicio de Desinsectación y Desratizacion',
+        phone: '',
+        address: '',
+        type: 'DE y DE',
+        status: 'Comenzado',
+        paymentStatus: '',
+    },
+    {
+        id: 3,
+        fullDate: '2026-06-16T13:00:00',
+        date: 'Jun 16',
+        time: '01:00 pm',
+        title: 'Comercializadora Alfaix Ltda - Principal - Desinsectacion y Desratización',
+        phone: '3204233599',
+        address: '',
+        type: 'DE y DE',
+        status: 'Creado',
+        paymentStatus: '',
+    },
+];
+
+    const sortedServices = [...services].sort(
+        (a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime()
+    );
+
+    const formatDate = (date: Date) => {
+        return date.toISOString().split('T')[0];
+    };
+
+    const filteredServices = sortedServices.filter((service) => {
+        const serviceDate = formatDate(new Date(service.fullDate));
+        const selected = formatDate(selectedDate);
+
+        return serviceDate === selected;
+    });
 
     return (
     <View style={styles.container}>
 
         <View style={styles.header}>
-            <Text style={styles.headerTitle}>Mis Servicios</Text>
+    <Text style={styles.headerTitle}>Mis Servicios</Text>
 
-            <TouchableOpacity
-                style={styles.headerCenter}
-                onPress={() => console.log('Abrir selector de día')}
+    <TouchableOpacity
+        style={styles.searchButton}
+        onPress={() => router.push('/search-services')}
+    >
+        <MaterialIcons name="search" size={30} color="#1D98D1" />
+    </TouchableOpacity>
+</View>
+
+    <View style={styles.calendarContainer}>
+        <Text style={styles.monthText}>
+            {monthNames[selectedDate.getMonth()]}
+        </Text>
+
+        <View style={styles.daysRow}>
+            <TouchableOpacity onPress={() => {const newDate = new Date(selectedDate);
+                    newDate.setDate(selectedDate.getDate() - 7);
+                    setSelectedDate(newDate);
+                }}
             >
-                <Text style={styles.today}>{selectedDay}</Text>
                 <MaterialIcons
-                    name="keyboard-arrow-down"
-                    size={30}
-                    color="#1D98D1"
-                    style={styles.arrowIcon}
+                    name="keyboard-arrow-left"
+                    size={26}
+                    color="#111111"
                 />
             </TouchableOpacity>
 
-            <TouchableOpacity
-                style={styles.searchButton}
-                onPress={() => router.push('/search-services')}
+            {days.map((day) => {
+                const isSelected = selectedDate.getDate() === day.dayNumber;
+
+                return (
+                        <TouchableOpacity
+                            key={day.dayNumber}
+                            style={[
+                                styles.dayItem,
+                                isSelected && styles.dayItemActive,
+                            ]}
+                            onPress={() => setSelectedDate(day.fullDate)}>
+                            <Text
+                                style={[
+                                    styles.dayName,
+                                    isSelected && styles.dayTextActive,
+                                ]}
+                            >
+                                {day.dayName}
+                            </Text>
+
+                            <Text
+                                style={[
+                                    styles.dayNumber,
+                                    isSelected && styles.dayTextActive,
+                                ]}
+                            >
+                                {day.dayNumber}
+                            </Text>
+                        </TouchableOpacity>
+                    );
+                })}
+
+            <TouchableOpacity onPress={() => {const newDate = new Date(selectedDate);
+                    newDate.setDate(selectedDate.getDate() + 7);
+                    setSelectedDate(newDate);
+                }}
             >
-                <MaterialIcons name="search" size={36} color="#1D98D1" />
+                <MaterialIcons
+                    name="keyboard-arrow-right"
+                    size={26}
+                    color="#111111"
+                />
             </TouchableOpacity>
         </View>
+    </View>
 
-        <ScrollView>
-            {services.map((service) => (
-                <ServiceCard
-                    key={service.id}
-                    date={service.date}
-                    time={service.time}
-                    title={service.title}
-                    phone={service.phone}
-                    address={service.address}
-                    type={service.type}
-                    status={service.status}
-                    paymentStatus={service.paymentStatus}
-                />
-            ))}
+    <ScrollView>
+            {filteredServices.length > 0 ? (
+                filteredServices.map((service) => (
+                    <ServiceCard
+                        key={service.id}
+                        date={service.date}
+                        time={service.time}
+                        title={service.title}
+                        phone={service.phone}
+                        address={service.address}
+                        type={service.type}
+                        status={service.status}
+                        paymentStatus={service.paymentStatus}
+                    />
+                ))
+            ) : (
+                <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>
+                        No hay servicios para este día
+                    </Text>
+                </View>
+            )}
         </ScrollView>
 
         <BottomMenu active="services" />
@@ -89,7 +202,7 @@ const services = [
     type,
     status,
     paymentStatus,
-    }: {
+}: {
     date: string;
     time: string;
     title: string;
@@ -98,38 +211,56 @@ const services = [
     type: string;
     status: string;
     paymentStatus: string;
-    }) {
+}) {
+    const getStatusColor = () => {
+        if (status === 'Finalizado') return '#0F6E31';
+        if (status === 'Comenzado') return '#F5A623';
+        return '#1295D8';
+    };
+
+    const statusColor = getStatusColor();
+
     return (
-        <TouchableOpacity 
-        style={styles.card}
-        onPress={() => router.push('/service-detail')}>
-        <View style={styles.dateSection}>
-            <Text style={styles.date}>{date}</Text>
-            <Text style={styles.time}>{time}</Text>
-        </View>
+        <TouchableOpacity
+            style={styles.card}
+            onPress={() => router.push('/service-detail')}
+        >
+            <View style={[styles.dateSection, { backgroundColor: statusColor }]}>
+                <Text style={styles.date}>{date}</Text>
+                <Text style={styles.time}>{time}</Text>
+            </View>
 
-        <View style={styles.infoSection}>
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.phone}>{phone}</Text>
-            <Text style={styles.address}>{address}</Text>
-        </View>
+            <View style={styles.infoSection}>
+                <Text style={styles.title}>{title}</Text>
 
-        <View style={styles.statusSection}>
-            <Text style={styles.type}>{type}</Text>
+                {phone !== '' && <Text style={styles.phone}>{phone}</Text>}
 
-            <Text style={styles.finished}>
-            {status}
-            </Text>
+                {address !== '' && <Text style={styles.address}>{address}</Text>}
+            </View>
 
-            <Text style={styles.paid}>
-            {paymentStatus}
-            </Text>
+            <View style={styles.statusSection}>
+                <MaterialIcons
+                    name="keyboard-arrow-down"
+                    size={30}
+                    color="#1D98D1"
+                    style={styles.cardArrow}
+                />
 
-            <Text style={styles.arrowDown}>⌄</Text>
-        </View>
+                <Text style={styles.type}>{type}</Text>
+
+                <Text style={[styles.statusText, { color: statusColor }]}>
+                    {status}
+                </Text>
+
+                {paymentStatus !== '' && (
+                    <Text style={styles.paid}>{paymentStatus}</Text>
+                )}
+            </View>
+
+            <View style={[styles.rightLine, { backgroundColor: statusColor }]} />
         </TouchableOpacity>
     );
-    }
+}
 
     const styles = StyleSheet.create({
     container: {
@@ -138,40 +269,20 @@ const services = [
     },
 
     header: {
-        height: 70,
+        height: 65,
         backgroundColor: '#FFF',
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-end',
         borderBottomWidth: 1,
         borderBottomColor: '#DDD',
-        paddingHorizontal: 24,
+        paddingHorizontal: 18,
+        paddingBottom: 10,
     },
 
     headerTitle: {
-        fontSize: 22,
+        fontSize: 18,
         color: '#222',
-    },
-
-    headerCenter: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-
-    today: {
-        color: '#1D98D1',
-        fontSize: 28,
-        fontWeight: 'bold',
-    },
-
-    arrow: {
-        color: '#1D98D1',
-        marginLeft: 10,
-    },
-
-    search: {
-        fontSize: 32,
-        color: '#1D98D1',
     },
 
     card: {
@@ -179,13 +290,13 @@ const services = [
         backgroundColor: '#FFF',
         marginHorizontal: 8,
         marginTop: 10,
-        elevation: 3,
+        elevation: 4,
         minHeight: 120,
-    },
+        position: 'relative',
+        },
 
     dateSection: {
         width: 95,
-        backgroundColor: '#0F6E31',
         justifyContent: 'center',
         alignItems: 'center',
         padding: 10,
@@ -199,7 +310,7 @@ const services = [
 
     time: {
         color: '#FFF',
-        fontSize: 18,
+        fontSize: 15,
         fontWeight: 'bold',
         marginTop: 20,
     },
@@ -210,48 +321,41 @@ const services = [
     },
 
     title: {
-        fontSize: 18,
+        fontSize: 12,
         fontWeight: 'bold',
     },
 
     phone: {
-        fontSize: 16,
-        marginTop: 5,
+        fontSize: 12,
+        marginTop: 4,
     },
 
     address: {
-        fontSize: 14,
-        marginTop: 3,
+        fontSize: 12,
+        marginTop: 2,
         color: '#444',
     },
 
     statusSection: {
-        width: 100,
+        width: 120,
         alignItems: 'center',
-        justifyContent: 'space-around',
+        justifyContent: 'center',
         paddingVertical: 10,
-    },
+        position: 'relative',
+        paddingRight: 35,
+        },
 
     type: {
         fontWeight: 'bold',
-        fontSize: 20,
-    },
-
-    finished: {
-        color: '#0F8C35',
-        fontSize: 18,
-        fontWeight: 'bold',
+        fontSize: 12,
+        marginTop: 18,
+        marginLeft: 6,
     },
 
     paid: {
         color: '#D6402F',
-        fontSize: 18,
+        fontSize: 12,
         fontWeight: 'bold',
-    },
-
-    arrowDown: {
-        color: '#1D98D1',
-        fontSize: 26,
     },
 
     bottomMenu: {
@@ -267,10 +371,87 @@ const services = [
     menuIcon: {
         fontSize: 16,
     },
-    arrowIcon: {
-        marginLeft: 8,
-    },
+    
     searchButton: {
         padding: 4,
     },
-    });
+
+    cardArrow: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    },
+
+    statusText: {
+        fontSize: 13,
+        fontWeight: 'bold',
+        marginTop: 12,
+        marginLeft: 6,
+    },
+
+    rightLine: {
+        width: 6,
+    },
+
+    monthRow: {
+        paddingHorizontal: 30,
+        marginBottom: 4,
+    },
+
+    monthText: {
+        color: '#1D98D1',
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+
+    daysRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 8,
+    },
+
+    dayItem: {
+        width: 38,
+        height: 48,
+        borderRadius: 6,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+
+    dayItemActive: {
+        backgroundColor: '#3478B8',
+    },
+
+    dayName: {
+        fontSize: 13,
+        color: '#111111',
+    },
+
+    dayNumber: {
+        fontSize: 15,
+        color: '#111111',
+        fontWeight: 'bold',
+    },
+
+    dayTextActive: {
+        color: '#FFFFFF',
+    },
+
+    calendarContainer: {
+        backgroundColor: '#FFFFFF',
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#DDDDDD',
+    },
+
+    emptyContainer: {
+        marginTop: 40,
+        alignItems: 'center',
+    },
+
+    emptyText: {
+        fontSize: 16,
+        color: '#777777',
+    },
+});

@@ -94,7 +94,7 @@ export default function BottomMenu({ active }: { active: ActiveScreen }) {
 
     const styles = StyleSheet.create({
     bottomMenu: {
-        height: 82,
+        height: 65,
         backgroundColor: '#FFFFFF',
         flexDirection: 'row',
         justifyContent: 'space-around',
@@ -104,8 +104,8 @@ export default function BottomMenu({ active }: { active: ActiveScreen }) {
     },
 
     menuItem: {
-        height: 58,
-        minWidth: 48,
+        height: 50,
+        minWidth: 44,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -117,7 +117,7 @@ export default function BottomMenu({ active }: { active: ActiveScreen }) {
     },
 
     label: {
-        fontSize: 20,
+        fontSize: 16,
         marginLeft: 10,
     },
     });

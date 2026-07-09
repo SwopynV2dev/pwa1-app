@@ -1,4 +1,4 @@
-import {View,Text,StyleSheet,ScrollView,TouchableOpacity,} from 'react-native';
+import {View,Text,StyleSheet,ScrollView,TouchableOpacity, Linking} from 'react-native';
 import { router } from 'expo-router';
 
 export default function ServiceDetail() {
@@ -22,100 +22,115 @@ export default function ServiceDetail() {
         agent: 'Elsa Bolaños',
     };
 
+    const callPhone = () => {
+    Linking.openURL(`tel:${service.phone}`);
+    };
+
+    const openMaps = () => {
+        const fullAddress = `${service.address}, ${service.city}`;
+        const encodedAddress = encodeURIComponent(fullAddress);
+
+        Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`);
+    };
+
     return (
         <View style={styles.container}>
         <ScrollView>
 
             <View style={styles.header}>
-            <Text style={styles.close} onPress={() => router.push('/services')}>✕</Text>
+                <Text style={styles.close} onPress={() => router.push('/services')}>✕</Text>
 
-            <Text style={styles.headerTitle}>
-                Detalle del servicio
-            </Text>
+                <Text style={styles.headerTitle}>
+                    Detalle del servicio
+                </Text>
             </View>
 
             <View style={styles.topInfo}>
-            <View>
-                <Text style={styles.date}>{service.date}</Text>
-                <Text style={styles.hour}>{service.hour}</Text>
+                <View>
+                    <Text style={styles.date}>{service.date}</Text>
+                    <Text style={styles.hour}>{service.hour}</Text>
+                </View>
+
+                <View style={styles.serviceNumberContainer}>
+                    <Text style={styles.serviceLabel}># Servicio</Text>
+                    <Text style={styles.serviceNumber}>
+                    {service.serviceNumber}
+                    </Text>
+                </View>
             </View>
 
-            <View style={styles.serviceNumberContainer}>
-                <Text style={styles.serviceLabel}># Servicio</Text>
-                <Text style={styles.serviceNumber}>
-                {service.serviceNumber}
+            <View style={styles.section}>
+                <Text style={styles.customer}>
+                    {service.customer}
+                </Text>
+
+                <Text style={styles.contact}>
+                    {service.contact}
                 </Text>
             </View>
-            </View>
 
             <View style={styles.section}>
-            <Text style={styles.customer}>
-                {service.customer}
-            </Text>
+                <TouchableOpacity onPress={callPhone}>
+                    <Text style={styles.phone}>
+                        {service.phone}
+                    </Text>
+                </TouchableOpacity>
 
-            <Text style={styles.contact}>
-                {service.contact}
-            </Text>
-            </View>
+                <TouchableOpacity onPress={openMaps}>
+                    <Text style={styles.address}>
+                        {service.address}
+                    </Text>
+                </TouchableOpacity>
 
-            <View style={styles.section}>
-            <Text style={styles.phone}>
-                {service.phone}
-            </Text>
-
-            <Text style={styles.address}>
-                {service.address}
-            </Text>
-
-            <Text style={styles.city}>
-                {service.city}
-            </Text>
+                <Text style={styles.city}>
+                    {service.city}
+                </Text>
             </View>
 
             <View style={styles.centerSection}>
-            <Text style={styles.serviceType}>
-                {service.serviceType}
-            </Text>
+                <Text style={styles.serviceType}>
+                    {service.serviceType}
+                </Text>
             </View>
 
             <View style={styles.section}>
-            <Text style={styles.plagues}>
-                {service.plagues}
-            </Text>
+                <Text style={styles.plagues}>
+                    {service.plagues}
+                </Text>
             </View>
 
             <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-                Condiciones de quienes habitan
-            </Text>
+                <Text style={styles.sectionTitle}>
+                    Condiciones de quienes habitan
+                </Text>
 
-            <Text style={styles.normalText}>
-                Enfermedades:
-            </Text>
+                <Text style={styles.normalText}>
+                    Enfermedades:
+                </Text>
 
-            <Text style={styles.normalText}>
-                Mascotas:
-            </Text>
+                <Text style={styles.normalText}>
+                    Mascotas:
+                </Text>
             </View>
 
             <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-                Comentarios
-            </Text>
+                <Text style={styles.sectionTitle}>
+                    Comentarios
+                </Text>
 
-            <Text style={styles.comments}>
-                {service.comments}
-            </Text>
+                <Text style={styles.comments}>
+                    {service.comments}
+                </Text>
             </View>
 
             <View style={styles.agentContainer}>
-            <Text style={styles.agentLabel}>
-                Agente:
-            </Text>
+                <Text style={styles.agentLabel}>
+                    Agente:
+                </Text>
 
-            <Text style={styles.agent}>
-                {service.agent}
-            </Text>
+                <Text style={styles.agent}>
+                    {service.agent}
+                </Text>
             </View>
 
         </ScrollView>
@@ -135,7 +150,7 @@ export default function ServiceDetail() {
                 <>
                 <TouchableOpacity 
                 style={styles.secondaryButton}
-                onPress={() => router.push('/services')}>
+                onPress={() => router.push('/service-cancel')}>
                     <Text style={styles.secondaryButtonText}>NO SE REALIZÓ</Text>
                 </TouchableOpacity>
 

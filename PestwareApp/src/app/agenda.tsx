@@ -4,8 +4,12 @@ import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 
 export default function Agenda() {
-    const [currentDate, setCurrentDate] = useState(new Date(2026, 5, 1));
-    const [selectedDay, setSelectedDay] = useState(4);
+    const today = new Date();
+
+    const [currentDate, setCurrentDate] = useState(
+        new Date(today.getFullYear(), today.getMonth(), 1));
+
+    const [selectedDay, setSelectedDay] = useState<number | null>(today.getDate());
 
     const monthNames = [
         'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -41,12 +45,12 @@ export default function Agenda() {
 
     const previousMonth = () => {
         setCurrentDate(new Date(year, month - 1, 1));
-        setSelectedDay(1);
+        setSelectedDay(null);
     };
 
     const nextMonth = () => {
         setCurrentDate(new Date(year, month + 1, 1));
-        setSelectedDay(1);
+        setSelectedDay(null);
     };
 
     return (

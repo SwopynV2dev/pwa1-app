@@ -1,8 +1,31 @@
 import {View,Text,StyleSheet,ScrollView,TouchableOpacity,} from 'react-native';
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
 
 export default function Inspections() {
+
+    const params = useLocalSearchParams();
+
+    const newInspection = params.newInspection === 'true';
+
+    const temporaryInspection = newInspection
+        ? {
+            id: 999,
+            code: 'I-TEMP',
+            date: params.date?.toString() || '',
+            time: params.time?.toString() || '',
+            stationCode: params.stationName?.toString() || '',
+            customer: params.clientName?.toString() || '',
+            details: [
+                params.activity?.toString() || '',
+                params.conditions?.toString() || '',
+                params.zone?.toString() || '',
+                params.perimeter?.toString() || '',
+            ],
+        }
+        : null;
+
     const inspections = [
         {
         id: 1,
@@ -34,6 +57,10 @@ export default function Inspections() {
         },
     ];
 
+    const inspectionsToShow = temporaryInspection
+    ? [temporaryInspection, ...inspections]
+    : inspections;
+
     return (
         <View style={styles.container}>
         <View style={styles.header}>
@@ -48,16 +75,16 @@ export default function Inspections() {
         </View>
 
         <ScrollView style={styles.list}>
-            {inspections.map((inspection) => (
-            <InspectionItem
-                key={inspection.id}
-                code={inspection.code}
-                date={inspection.date}
-                time={inspection.time}
-                stationCode={inspection.stationCode}
-                customer={inspection.customer}
-                details={inspection.details}
-            />
+            {inspectionsToShow.map((inspection) => (
+                <InspectionItem
+                    key={inspection.id}
+                    code={inspection.code}
+                    date={inspection.date}
+                    time={inspection.time}
+                    stationCode={inspection.stationCode}
+                    customer={inspection.customer}
+                    details={inspection.details}
+                />
             ))}
         </ScrollView>
         </View>

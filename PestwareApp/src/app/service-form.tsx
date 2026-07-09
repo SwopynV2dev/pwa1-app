@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -6,17 +6,16 @@ import { Image, Modal, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Signature from 'react-native-signature-canvas';
 
+type PhotoItem = {
+    uri: string;
+    comment: string;
+};
 
 export default function ServiceForm() {
     const serviceId = 1;
 
 const serviceFormData = {
     serviceNumber: `OS-8299-${serviceId}`,
-    startTime: new Date().toLocaleTimeString('es-MX', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-    }),
     endTime: '00:00 --',
     sections: [
         { id: 1, title: 'Inspección del lugar', icon: 'find-in-page' },
@@ -30,37 +29,44 @@ const serviceFormData = {
     const [openSections, setOpenSections] = useState<number[]>([]);
     const [completedSections, setCompletedSections] = useState<number[]>([]);
     const [selectedPlagues, setSelectedPlagues] = useState<string[]>([]);
-    const [selectedArea, setSelectedArea] = useState('');
-    const [photos, setPhotos] = useState<string[]>([]);
+    const [photos, setPhotos] = useState<PhotoItem[]>([]);
     const [showPlagueOptions, setShowPlagueOptions] = useState(false);
-    const [showAreaOptions, setShowAreaOptions] = useState(false);
     const [showPhotos, setShowPhotos] = useState(false);
+    const [nestingAreas, setNestingAreas] = useState('');
+    const [showInfestationModal, setShowInfestationModal] = useState(false);
+    const [infestationLevels, setInfestationLevels] = useState<{ [key: string]: string }>({});
+    const [openInfestationPlague, setOpenInfestationPlague] = useState<string | null>(null);
+
+    const [currentPlagueIndex, setCurrentPlagueIndex] = useState(0);
+    const infestationOptions = ['Nulo', 'Bajo', 'Medio', 'Alto'];
     //Condiciones del lugar
-    const [selectedCleanAreas, setSelectedCleanAreas] = useState<string[]>([]);
-    const [conditionPhotos, setConditionPhotos] = useState<string[]>([]);
-    const [showCleanAreaOptions, setShowCleanAreaOptions] = useState(false);
+    const [conditionPhotos, setConditionPhotos] = useState<PhotoItem[]>([]);
     const [showConditionPhotos, setShowConditionPhotos] = useState(false);
     const [showIndicationsOptions, setShowIndicationsOptions] = useState(false);
     const [indications, setIndications] = useState('Si');
-
-    const cleanAreaOptions = ['Sala', 'Cocina', 'Recámara', 'Baño', 'Cochera', 'Patio'];
+    const [cleaningOrder, setCleaningOrder] = useState('');
 
     //Inspeccion del lugar
     const plagueOptions = ['Cucaracha', 'Hormiga', 'Rata', 'Mosquito', 'Araña', 'Termita'];
-    const areaOptions = ['Sala', 'Cocina', 'Recámara', 'Cochera', 'Patio'];
 
     //Control de plagas
-    const [selectedControlArea, setSelectedControlArea] = useState('');
     const [selectedMethods, setSelectedMethods] = useState<string[]>([]);
     const [selectedPesticide, setSelectedPesticide] = useState('');
-    const [controlPhotos, setControlPhotos] = useState<string[]>([]);
+    const [controlPhotos, setControlPhotos] = useState<PhotoItem[]>([]);
+    const [controlArea, setControlArea] = useState('');
 
-    const [showControlAreas, setShowControlAreas] = useState(false);
     const [showMethods, setShowMethods] = useState(false);
     const [showPesticides, setShowPesticides] = useState(false);
     const [showControlPhotos, setShowControlPhotos] = useState(false);
 
-    const controlAreaOptions = ['Sala', 'Cocina', 'Recámara', 'Cochera', 'Patio'];
+    const [showDoseModal, setShowDoseModal] = useState(false);
+    const [dose, setDose] = useState('');
+    const [quantity, setQuantity] = useState('');
+    const [editingProductIndex, setEditingProductIndex] = useState<number | null>(null);
+
+    const [appliedProducts, setAppliedProducts] = useState<
+        { pesticide: string; dose: string; quantity: string }[]>([]);
+
     const methodOptions = ['Rociado', 'Polvos', 'Untado', 'Gel', 'Cebadero', 'Trampa'];
     const pesticideOptions = ['Cipermetrina','Ácido Bórico','Gel Palmera','Rodilon Minibloque','Net-Mosk WP','Scourge VPM EC 20%',];
 
@@ -71,95 +77,138 @@ const serviceFormData = {
     const [showPaymentTypes, setShowPaymentTypes] = useState(false);
     const [clientDidNotPay, setClientDidNotPay] = useState(false);
 
-    const paymentMethodOptions = ['Efectivo', 'Transferencia', 'Cheque'];
+    const paymentMethodOptions = ['Efectivo', 'Tarjeta de Crédito', 'Tarjeta de Débito' , 'Transferencia', 'Deposito' , 'Cheque'];
     const paymentTypeOptions = ['Contado', 'A meses'];
 
     //Fotos
     const [clientPhotos, setClientPhotos] = useState<string[]>([]);
     const [showClientPhotos, setShowClientPhotos] = useState(false);
+    const [showPhotoOptionsModal, setShowPhotoOptionsModal] = useState(false);
+    const [photoTarget, setPhotoTarget] = useState<'inspection' | 'condition' | 'control' | null>(null);
 
     //Firmas
     const [signature, setSignature] = useState<string | null>(null);
     const [showSignaturePad, setShowSignaturePad] = useState(false);
     const signatureRef = useRef<any>(null);
 
+    //Hora fin
+    const [startTime, setStartTime] = useState('');
+    const [endTime, setEndTime] = useState('00:00 --');
+
+    useEffect(() => {
+        if (startTime === '') {
+            setStartTime(
+                new Date().toLocaleTimeString('es-MX', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                })
+            );
+        }
+    }, []);
+
+    useEffect(() => {
+        if (startTime === '') {
+            setStartTime(
+                new Date().toLocaleTimeString('es-MX', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                })
+            );
+        }
+    }, []);
+
     //Condiciones del lugar
     const togglePlague = (plague: string) => {
     if (selectedPlagues.includes(plague)) {
         setSelectedPlagues(selectedPlagues.filter((item) => item !== plague));
+
+        const updatedLevels = { ...infestationLevels };
+        delete updatedLevels[plague];
+        setInfestationLevels(updatedLevels);
     } else {
         setSelectedPlagues([...selectedPlagues, plague]);
+        setInfestationLevels({
+            ...infestationLevels,
+            [plague]: 'Nulo',
+        });
     }
+};
+
+    //Fotos
+    const openPhotoOptions = (target: 'inspection' | 'condition' | 'control') => {
+    setPhotoTarget(target);
+    setShowPhotoOptionsModal(true);
     };
 
-    const takePhoto = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-        alert('Se necesita permiso para usar la cámara');
-        return;
-    }
-    const result = await ImagePicker.launchCameraAsync({
-        quality: 0.7,
-    });
-    if (!result.canceled) {
-        setPhotos([...photos, result.assets[0].uri]);
-    }
+    const savePhotoByTarget = (uri: string) => {
+    const newPhoto = {
+        uri,
+        comment: '',
     };
 
-    //Inspeccion del lugar
-    const toggleCleanArea = (area: string) => {
-    if (selectedCleanAreas.includes(area)) {
-        setSelectedCleanAreas(selectedCleanAreas.filter((item) => item !== area));
-    } else {
-        setSelectedCleanAreas([...selectedCleanAreas, area]);
+    if (photoTarget === 'inspection') {
+        setPhotos([...photos, newPhoto]);
     }
+
+    if (photoTarget === 'condition') {
+        setConditionPhotos([...conditionPhotos, newPhoto]);
+    }
+
+    if (photoTarget === 'control') {
+        setControlPhotos([...controlPhotos, newPhoto]);
+    }
+};
+
+    const selectCameraPhoto = async () => {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+        if (!permission.granted) {
+            alert('Se necesita permiso para usar la cámara');
+            return;
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
+            quality: 0.7,
+        });
+
+        if (!result.canceled) {
+            savePhotoByTarget(result.assets[0].uri);
+        }
+
+        setShowPhotoOptionsModal(false);
     };
 
-    const takeConditionPhoto = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-        alert('Se necesita permiso para usar la cámara');
-        return;
-    }
-    const result = await ImagePicker.launchCameraAsync({
-        quality: 0.7,
-    });
-    if (!result.canceled) {
-        setConditionPhotos([...conditionPhotos, result.assets[0].uri]);
-    }
+    const selectGalleryPhoto = async () => {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+        if (!permission.granted) {
+            alert('Se necesita permiso para acceder a la galería');
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            quality: 0.7,
+            allowsMultipleSelection: false,
+        });
+
+        if (!result.canceled) {
+            savePhotoByTarget(result.assets[0].uri);
+        }
+
+        setShowPhotoOptionsModal(false);
     };
 
-    //Condiciones del lugar
+    //Foto
+    
+    //Control de plagas
     const toggleMethod = (method: string) => {
     if (selectedMethods.includes(method)) {
         setSelectedMethods(selectedMethods.filter((item) => item !== method));
     } else {
         setSelectedMethods([...selectedMethods, method]);
     }
-    };
-    const takeControlPhoto = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-        alert('Se necesita permiso para usar la cámara');
-        return;
-    }
-    const result = await ImagePicker.launchCameraAsync({
-        quality: 0.7,
-    });
-    if (!result.canceled) {
-        setControlPhotos([...controlPhotos, result.assets[0].uri]);
-    }
-    };
-    const addNewArea = () => {
-    Alert.prompt(
-        'Nueva área',
-        'Escribe el nombre del área',
-        (text) => {
-        if (text.trim() !== '') {
-            setSelectedControlArea(text);
-        }
-        }
-    );
     };
 
     //Firma
@@ -193,28 +242,51 @@ const serviceFormData = {
         }
     };
 
+        //Botón guardar
+        const completeSection = (sectionId: number) => {
+        if (!completedSections.includes(sectionId)) {
+            setCompletedSections([...completedSections, sectionId]);
+        }
+
+        // Cierra la sección actual
+        setOpenSections(
+            openSections.filter(id => id !== sectionId)
+        );
+
+        // Abre la siguiente sección
+        const nextSection = serviceFormData.sections.find(
+            section => section.id === sectionId + 1
+        );
+
+        if (nextSection) {
+            setOpenSections([nextSection.id]);
+        }
+    };
+
     const isFormCompleted = completedSections.length === serviceFormData.sections.length;
+
+    const currentPlague = selectedPlagues[currentPlagueIndex];
 
     return (
         <View style={styles.container}>
         <View style={styles.topInfo}>
-            <TouchableOpacity onPress={() => router.back()}>
-            <MaterialIcons name="arrow-back" size={40} color="#438FC2" />
+            <TouchableOpacity onPress={() => router.push('/service-detail')}>
+                <MaterialIcons name="arrow-back" size={40} color="#438FC2" />
             </TouchableOpacity>
 
             <View style={styles.infoBlock}>
-            <Text style={styles.infoTitle}># Servicio</Text>
-            <Text style={styles.infoText}>{serviceFormData.serviceNumber}</Text>
+                <Text style={styles.infoTitle}># Servicio</Text>
+                <Text style={styles.infoText}>{serviceFormData.serviceNumber}</Text>
             </View>
 
             <View style={styles.infoBlock}>
-            <Text style={styles.infoTitle}>Hora Inicio</Text>
-            <Text style={styles.infoText}>{serviceFormData.startTime}</Text>
+                <Text style={styles.infoTitle}>Hora Inicio</Text>
+                <Text style={styles.infoText}>{startTime}</Text>
             </View>
 
             <View style={styles.infoBlock}>
-            <Text style={styles.infoTitle}>Hora Fin</Text>
-            <Text style={styles.infoText}>{serviceFormData.endTime}</Text>
+                <Text style={styles.infoTitle}>Hora Fin</Text>
+                <Text style={styles.infoText}>{endTime}</Text>
             </View>
         </View>
 
@@ -234,7 +306,23 @@ const serviceFormData = {
                     color="#2094C9"
                 />
 
-                <Text style={styles.sectionTitle}>{section.title}</Text>
+                <View style={styles.sectionTitleContainer}>
+                    <Text style={styles.sectionTitle}>
+                        {section.title}
+                    </Text>
+
+                    {completedSections.includes(section.id) && (
+                        <View style={styles.completedRow}>
+                            <Text style={styles.completedText}>Completado</Text>
+
+                            <MaterialIcons
+                                name="check-circle-outline"
+                                size={20}
+                                color="#5BC0AA"
+                            />
+                        </View>
+                    )}
+                </View>
 
                 <MaterialIcons
                     name={isOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
@@ -258,61 +346,61 @@ const serviceFormData = {
                                 <Text style={styles.photoButtonText}>Ver Fotos</Text>
                             </TouchableOpacity>
 
-                            <TouchableOpacity onPress={takePhoto}>
+                            <TouchableOpacity onPress={() => openPhotoOptions('inspection')}>
                                 <MaterialIcons name="add-a-photo" size={50} color="#2094C9" />
                             </TouchableOpacity>
                             </View>
 
                             {showPlagueOptions && (
-                            <View style={styles.optionsBox}>
-                                {plagueOptions.map((plague) => (
-                                <TouchableOpacity
-                                    key={plague}
-                                    style={styles.optionItem}
-                                    onPress={() => togglePlague(plague)}
-                                >
-                                    <Text style={styles.optionItemText}>
-                                    {selectedPlagues.includes(plague) ? '✓ ' : ''}
-                                    {plague}
-                                    </Text>
-                                </TouchableOpacity>
-                                ))}
-                            </View>
+                                <View style={styles.optionsBox}>
+                                    {plagueOptions.map((plague) => (
+                                        <TouchableOpacity
+                                            key={plague}
+                                            style={styles.optionItem}
+                                            onPress={() => togglePlague(plague)}
+                                        >
+                                            <Text style={styles.optionItemText}>
+                                                {selectedPlagues.includes(plague) ? '✓ ' : ''}
+                                                {plague}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+
+                                    <TouchableOpacity
+                                        style={styles.okPlaguesButton}
+                                        onPress={() => {
+                                            setShowPlagueOptions(false);
+
+                                            if (selectedPlagues.length > 0) {
+                                                setCurrentPlagueIndex(0);
+                                                setShowInfestationModal(true);
+                                            }
+                                        }}
+                                    >
+                                        <Text style={styles.okPlaguesText}>OK</Text>
+                                    </TouchableOpacity>
+
+                                </View>
                             )}
 
                             <Text style={styles.label}>Plagas seleccionadas:</Text>
 
                             <TextInput
-                            style={styles.textArea}
-                            value={selectedPlagues.join(', ')}
-                            editable={false}
+                                style={styles.textArea}
+                                value={selectedPlagues
+                                    .map((plague) => `${plague}: ${infestationLevels[plague] || 'Nulo'}`)
+                                    .join(', ')
+                                }
+                                editable={false}
                             />
 
-                            <TouchableOpacity
-                            style={styles.input}
-                            onPress={() => setShowAreaOptions(!showAreaOptions)}
-                            >
-                            <Text style={styles.inputText}>
-                                {selectedArea || 'Áreas de anidamiento'}
-                            </Text>
-                            </TouchableOpacity>
-
-                            {showAreaOptions && (
-                            <View style={styles.optionsBox}>
-                                {areaOptions.map((area) => (
-                                <TouchableOpacity
-                                    key={area}
-                                    style={styles.optionItem}
-                                    onPress={() => {
-                                    setSelectedArea(area);
-                                    setShowAreaOptions(false);
-                                    }}
-                                >
-                                    <Text style={styles.optionItemText}>{area}</Text>
-                                </TouchableOpacity>
-                                ))}
-                            </View>
-                            )}
+                            <TextInput
+                                placeholder="Áreas de anidamiento"
+                                placeholderTextColor="#3D5A96"
+                                style={styles.input}
+                                value={nestingAreas}
+                                onChangeText={setNestingAreas}
+                            />
 
                             <TextInput
                             placeholder="Comentarios"
@@ -323,32 +411,119 @@ const serviceFormData = {
                             <TouchableOpacity
                             style={styles.saveSectionButton}
                             onPress={() => {
-                                if (!completedSections.includes(section.id)) {
-                                setCompletedSections([...completedSections, section.id]);
-                                }
-
-                                alert('Sección guardada exitosamente')
+                                completeSection(section.id);
                             }}
                             >
                             <Text style={styles.saveSectionText}>GUARDAR</Text>
                             </TouchableOpacity>
+
+                            <Modal visible={showInfestationModal} transparent animationType="fade">
+                                <View style={styles.modalBackground}>
+                                    <View style={styles.infestationModal}>
+                                        <View style={styles.infestationItem}>
+                                    <Text style={styles.infestationTitle}>
+                                        Grado de Infestación: {currentPlague}
+                                    </Text>
+
+                                    <TouchableOpacity
+                                        style={styles.infestationSelect}
+                                        onPress={() =>
+                                            setOpenInfestationPlague(
+                                                openInfestationPlague === currentPlague
+                                                    ? null
+                                                    : currentPlague
+                                            )
+                                        }
+                                    >
+                                        <Text style={styles.infestationValue}>
+                                            {infestationLevels[currentPlague] || 'Nulo'}
+                                        </Text>
+
+                                        <MaterialIcons
+                                            name="keyboard-arrow-down"
+                                            size={24}
+                                            color="#666"
+                                        />
+                                    </TouchableOpacity>
+
+                                    {openInfestationPlague === currentPlague && (
+                                        <View style={styles.infestationOptionsBox}>
+                                            {infestationOptions.map((option) => (
+                                                <TouchableOpacity
+                                                    key={option}
+                                                    style={styles.infestationOption}
+                                                    onPress={() => {
+                                                        setInfestationLevels({
+                                                            ...infestationLevels,
+                                                            [currentPlague]: option,
+                                                        });
+
+                                                        setOpenInfestationPlague(null);
+                                                    }}
+                                                >
+                                                    <Text style={styles.infestationOptionText}>
+                                                        {option}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    )}
+                                </View>
+
+                                        <TouchableOpacity
+                                            style={styles.modalOkButton}
+                                            onPress={() => {
+                                                if (currentPlagueIndex < selectedPlagues.length - 1) {
+                                                    setCurrentPlagueIndex(currentPlagueIndex + 1);
+                                                } else {
+                                                    setCurrentPlagueIndex(0);
+                                                    setShowInfestationModal(false);
+                                                }
+                                            }}
+                                        >
+                                            <Text style={styles.modalOkText}>OK</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            </Modal>
 
                             <Modal visible={showPhotos} transparent animationType="slide">
                             <View style={styles.modalBackground}>
                                 <View style={styles.modalContent}>
                                 <Text style={styles.modalTitle}>Fotos tomadas</Text>
 
-                                {photos.length === 0 ? (
-                                    <Text>No hay fotos todavía</Text>
-                                ) : (
-                                    photos.map((photo, index) => (
-                                    <Image
-                                        key={index}
-                                        source={{ uri: photo }}
-                                        style={styles.photoPreview}
-                                    />
-                                    ))
-                                )}
+                                <ScrollView
+                                    style={styles.photosScroll}
+                                    contentContainerStyle={styles.photosScrollContent}
+                                    nestedScrollEnabled
+                                    keyboardShouldPersistTaps="handled"
+                                >
+                                    {photos.length === 0 ? (
+                                        <Text>No hay fotos todavía</Text>
+                                    ) : (
+                                        photos.map((photo, index) => (
+                                            <View key={index} style={styles.photoItem}>
+                                                <Image
+                                                    source={{ uri: photo.uri }}
+                                                    style={styles.photoPreview}
+                                                    resizeMode="contain"
+                                                />
+
+                                                <TextInput
+                                                    placeholder="Comentario de la foto"
+                                                    placeholderTextColor="#3D5A96"
+                                                    style={styles.photoCommentInput}
+                                                    value={photo.comment}
+                                                    onChangeText={(text) => {
+                                                        const updatedPhotos = [...photos];
+                                                        updatedPhotos[index].comment = text;
+                                                        setPhotos(updatedPhotos);
+                                                    }}
+                                                />
+                                            </View>
+                                        ))
+                                    )}
+                                </ScrollView>
 
                                 <TouchableOpacity
                                     style={styles.closeModalButton}
@@ -364,13 +539,6 @@ const serviceFormData = {
                 {isOpen && section.id === 2 && (
                     <View style={styles.formContainer}>
                         <View style={styles.formTopRow}>
-                        <TouchableOpacity
-                            style={styles.selectButton}
-                            onPress={() => setShowCleanAreaOptions(!showCleanAreaOptions)}
-                        >
-                            <MaterialIcons name="format-list-bulleted" size={28} color="#FFFFFF" />
-                            <Text style={styles.selectButtonText}>Seleccionar</Text>
-                        </TouchableOpacity>
 
                         <TouchableOpacity
                             style={styles.photoButton}
@@ -379,56 +547,42 @@ const serviceFormData = {
                             <Text style={styles.photoButtonText}>Ver Fotos</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity onPress={takeConditionPhoto}>
+                        <TouchableOpacity onPress={() => openPhotoOptions('condition')}>
                             <MaterialIcons name="add-a-photo" size={50} color="#2094C9" />
                         </TouchableOpacity>
                         </View>
 
-                        {showCleanAreaOptions && (
-                        <View style={styles.optionsBox}>
-                            {cleanAreaOptions.map((area) => (
-                            <TouchableOpacity
-                                key={area}
-                                style={styles.optionItem}
-                                onPress={() => toggleCleanArea(area)}
-                            >
-                                <Text style={styles.optionItemText}>
-                                {selectedCleanAreas.includes(area) ? '✓ ' : ''}
-                                {area}
-                                </Text>
-                            </TouchableOpacity>
-                            ))}
-                        </View>
-                        )}
-
                         <Text style={styles.label}>Orden y limpieza seleccionados:</Text>
 
                         <TextInput
-                        style={styles.textArea}
-                        value={selectedCleanAreas.join(', ')}
-                        editable={false}
+                            placeholder="Orden y limpieza"
+                            placeholderTextColor="#3D5A96"
+                            style={styles.textArea}
+                            value={cleaningOrder}
+                            onChangeText={setCleaningOrder}
+                            multiline
                         />
 
                         <TextInput
-                        placeholder="Accesos restringidos"
-                        placeholderTextColor="#3D5A96"
-                        style={styles.input}
+                            placeholder="Accesos restringidos"
+                            placeholderTextColor="#3D5A96"
+                            style={styles.input}
                         />
 
                         <TextInput
-                        placeholder="Comentarios"
-                        placeholderTextColor="#3D5A96"
-                        style={styles.input}
+                            placeholder="Comentarios"
+                            placeholderTextColor="#3D5A96"
+                            style={styles.input}
                         />
 
                         <Text style={styles.label}>Cumplió indicaciones:</Text>
 
                         <TouchableOpacity
-                        style={styles.optionRow}
-                        onPress={() => setShowIndicationsOptions(!showIndicationsOptions)}
+                            style={styles.optionRow}
+                            onPress={() => setShowIndicationsOptions(!showIndicationsOptions)}
                         >
                         <Text style={styles.optionValue}>{indications}</Text>
-                        <MaterialIcons name="keyboard-arrow-down" size={26} color="#666" />
+                            <MaterialIcons name="keyboard-arrow-down" size={26} color="#666" />
                         </TouchableOpacity>
 
                         {showIndicationsOptions && (
@@ -451,11 +605,7 @@ const serviceFormData = {
                         <TouchableOpacity
                         style={styles.saveSectionButton}
                         onPress={() => {
-                            if (!completedSections.includes(section.id)) {
-                            setCompletedSections([...completedSections, section.id]);
-                            }
-
-                            alert('Condiciones del lugar guardadas');
+                            completeSection(section.id);
                         }}
                         >
                         <MaterialIcons name="keyboard-arrow-down" size={28} color="#2094C9" />
@@ -467,17 +617,38 @@ const serviceFormData = {
                             <View style={styles.modalContent}>
                             <Text style={styles.modalTitle}>Fotos tomadas</Text>
 
-                            {conditionPhotos.length === 0 ? (
-                                <Text>No hay fotos todavía</Text>
-                            ) : (
-                                conditionPhotos.map((photo, index) => (
-                                <Image
-                                    key={index}
-                                    source={{ uri: photo }}
-                                    style={styles.photoPreview}
-                                />
-                                ))
-                            )}
+                            <ScrollView
+                                style={styles.photosScroll}
+                                contentContainerStyle={styles.photosScrollContent}
+                                nestedScrollEnabled
+                                keyboardShouldPersistTaps="handled"
+                            >
+                                {conditionPhotos.length === 0 ? (
+                                    <Text>No hay fotos todavía</Text>
+                                ) : (
+                                    conditionPhotos.map((photo, index) => (
+                                        <View key={index} style={styles.photoItem}>
+                                            <Image
+                                                source={{ uri: photo.uri }}
+                                                style={styles.photoPreview}
+                                                resizeMode="contain"
+                                            />
+
+                                            <TextInput
+                                                placeholder="Comentario de la foto"
+                                                placeholderTextColor="#3D5A96"
+                                                style={styles.photoCommentInput}
+                                                value={photo.comment}
+                                                onChangeText={(text) => {
+                                                    const updatedPhotos = [...conditionPhotos];
+                                                    updatedPhotos[index].comment = text;
+                                                    setConditionPhotos(updatedPhotos);
+                                                }}
+                                            />
+                                        </View>
+                                    ))
+                                )}
+                            </ScrollView>
 
                             <TouchableOpacity
                                 style={styles.closeModalButton}
@@ -493,12 +664,6 @@ const serviceFormData = {
                 {isOpen && section.id === 3 && (
                     <View style={styles.formContainer}>
                         <View style={styles.formTopRow}>
-                        <TouchableOpacity
-                            style={styles.photoButton}
-                            onPress={() => setShowControlAreas(!showControlAreas)}
-                        >
-                            <Text style={styles.photoButtonText}>Ver Áreas</Text>
-                        </TouchableOpacity>
 
                         <TouchableOpacity
                             style={styles.photoButton}
@@ -517,35 +682,18 @@ const serviceFormData = {
                             />
                             </TouchableOpacity>
 
-                            <TouchableOpacity onPress={takeControlPhoto}>
+                            <TouchableOpacity onPress={() => openPhotoOptions('control')}>
                             <MaterialIcons name="add-a-photo" size={43} color="#2094C9" />
                             </TouchableOpacity>
                         </View>
                         </View>
 
-                        {showControlAreas && (
-                        <View style={styles.optionsBox}>
-                            {controlAreaOptions.map((area) => (
-                            <TouchableOpacity
-                                key={area}
-                                style={styles.optionItem}
-                                onPress={() => {
-                                setSelectedControlArea(area);
-                                setShowControlAreas(false);
-                                }}
-                            >
-                                <Text style={styles.optionItemText}>{area}</Text>
-                            </TouchableOpacity>
-                            ))}
-                        </View>
-                        )}
-
                         <TextInput
-                        placeholder="Área a controlar"
-                        placeholderTextColor="#3D5A96"
-                        style={styles.input}
-                        value={selectedControlArea}
-                        editable={false}
+                            placeholder="Área a controlar"
+                            placeholderTextColor="#3D5A96"
+                            style={styles.input}
+                            value={controlArea}
+                            onChangeText={setControlArea}
                         />
 
                         <TouchableOpacity
@@ -576,16 +724,16 @@ const serviceFormData = {
                         <Text style={styles.label}>Método de aplicación seleccionados:</Text>
 
                         <TextInput
-                        style={styles.textArea}
-                        value={selectedMethods.join(', ')}
-                        editable={false}
+                            style={styles.textArea}
+                            value={selectedMethods.join(', ')}
+                            editable={false}
                         />
 
                         <Text style={styles.label}>Plaguicida aplicado:</Text>
 
                         <TouchableOpacity
-                        style={styles.pesticideRow}
-                        onPress={() => setShowPesticides(!showPesticides)}
+                            style={styles.pesticideRow}
+                            onPress={() => setShowPesticides(!showPesticides)}
                         >
                         <Text style={styles.pesticideText}>
                             {selectedPesticide || 'Seleccione el plaguicida utilizado:'}
@@ -603,13 +751,72 @@ const serviceFormData = {
                                 onPress={() => {
                                 setSelectedPesticide(pesticide);
                                 setShowPesticides(false);
-                                }}
+                                setDose('');
+                                setQuantity('');
+                                setEditingProductIndex(null);
+                                setShowDoseModal(true);
+                            }}
                             >
                                 <Text style={styles.optionItemText}>{pesticide}</Text>
                             </TouchableOpacity>
                             ))}
                         </View>
                         )}
+
+                        <TouchableOpacity
+                            style={styles.refreshButton}
+                            onPress={() => {
+                                alert('Dosis actualizada');
+                            }}
+                        >
+                            <MaterialIcons name="sync" size={28} color="#2094C9" />
+                        </TouchableOpacity>
+
+                        {appliedProducts.map((product, index) => (
+                            <View key={index} style={styles.appliedProductCard}>
+                                <Text style={styles.appliedProductName}>
+                                    {product.pesticide}
+                                </Text>
+
+                                <View style={styles.appliedProductInfo}>
+                                    <Text style={styles.appliedProductValue}>
+                                        {product.quantity}
+                                    </Text>
+
+                                    <Text style={styles.appliedProductValue}>
+                                        {product.dose}
+                                    </Text>
+
+                                    <TouchableOpacity
+                                        style={styles.editButton}
+                                        onPress={() => {
+                                            setSelectedPesticide(product.pesticide);
+                                            setDose(product.dose);
+                                            setQuantity(product.quantity);
+                                            setEditingProductIndex(index);
+                                            setShowDoseModal(true);
+                                        }}
+                                    >
+                                        <Text style={styles.editButtonText}>EDITAR</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={styles.deleteButton}
+                                        onPress={() => {
+                                            setAppliedProducts(
+                                                appliedProducts.filter(
+                                                    (_, itemIndex) => itemIndex !== index
+                                                )
+                                            );
+                                        }}
+                                    >
+                                        <Text style={styles.deleteButtonText}>
+                                            ELIMINAR
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        ))}
 
                         <TextInput
                         placeholder="Comentarios"
@@ -618,20 +825,12 @@ const serviceFormData = {
                         />
 
                         <View style={styles.bottomFormButtons}>
-                        <TouchableOpacity style={styles.newAreaButton} onPress={addNewArea}>
-                            <MaterialIcons name="add" size={26} color="#999999" />
-                            <Text style={styles.newAreaText}>NUEVA AREA</Text>
-                        </TouchableOpacity>
 
                         <TouchableOpacity
                             style={styles.saveSectionButton}
                             onPress={() => {
-                            if (!completedSections.includes(section.id)) {
-                                setCompletedSections([...completedSections, section.id]);
-                            }
-
-                            alert('Control de plagas guardado');
-                            }}
+                            completeSection(section.id);
+                        }}
                         >
                             <MaterialIcons name="keyboard-arrow-down" size={28} color="#2094C9" />
                             <Text style={styles.saveSectionText}>GUARDAR</Text>
@@ -643,17 +842,38 @@ const serviceFormData = {
                             <View style={styles.modalContent}>
                             <Text style={styles.modalTitle}>Fotos tomadas</Text>
 
-                            {controlPhotos.length === 0 ? (
-                                <Text>No hay fotos todavía</Text>
-                            ) : (
-                                controlPhotos.map((photo, index) => (
-                                <Image
-                                    key={index}
-                                    source={{ uri: photo }}
-                                    style={styles.photoPreview}
-                                />
-                                ))
-                            )}
+                            <ScrollView
+                                style={styles.photosScroll}
+                                contentContainerStyle={styles.photosScrollContent}
+                                nestedScrollEnabled
+                                keyboardShouldPersistTaps="handled"
+                            >
+                                {controlPhotos.length === 0 ? (
+                                    <Text>No hay fotos todavía</Text>
+                                ) : (
+                                    controlPhotos.map((photo, index) => (
+                                        <View key={index} style={styles.photoItem}>
+                                            <Image
+                                                source={{ uri: photo.uri }}
+                                                style={styles.photoPreview}
+                                                resizeMode="contain"
+                                            />
+
+                                            <TextInput
+                                                placeholder="Comentario de la foto"
+                                                placeholderTextColor="#3D5A96"
+                                                style={styles.photoCommentInput}
+                                                value={photo.comment}
+                                                onChangeText={(text) => {
+                                                    const updatedPhotos = [...controlPhotos];
+                                                    updatedPhotos[index].comment = text;
+                                                    setControlPhotos(updatedPhotos);
+                                                }}
+                                            />
+                                        </View>
+                                    ))
+                                )}
+                            </ScrollView>
 
                             <TouchableOpacity
                                 style={styles.closeModalButton}
@@ -663,6 +883,67 @@ const serviceFormData = {
                             </TouchableOpacity>
                             </View>
                         </View>
+                        </Modal>
+
+                        <Modal visible={showDoseModal} transparent animationType="fade">
+                            <View style={styles.modalBackground}>
+                                <View style={styles.doseModal}>
+                                    <TextInput
+                                        placeholder="Dosis"
+                                        placeholderTextColor="#3D5A96"
+                                        style={styles.input}
+                                        value={dose}
+                                        onChangeText={setDose}
+                                    />
+
+                                    <TextInput
+                                        placeholder="Cantidad a utilizar"
+                                        placeholderTextColor="#3D5A96"
+                                        style={styles.input}
+                                        value={quantity}
+                                        onChangeText={setQuantity}
+                                        keyboardType="numeric"
+                                    />
+
+                                    <TouchableOpacity
+                                        style={styles.modalOkButton}
+                                        onPress={() => {
+                                            if (!selectedPesticide) {
+                                                alert('Selecciona un plaguicida');
+                                                return;
+                                            }
+
+                                            if (editingProductIndex !== null) {
+                                                const updatedProducts = [...appliedProducts];
+
+                                                updatedProducts[editingProductIndex] = {
+                                                    pesticide: selectedPesticide,
+                                                    dose,
+                                                    quantity,
+                                                };
+
+                                                setAppliedProducts(updatedProducts);
+                                            } else {
+                                                setAppliedProducts([
+                                                    ...appliedProducts,
+                                                    {
+                                                        pesticide: selectedPesticide,
+                                                        dose,
+                                                        quantity,
+                                                    },
+                                                ]);
+                                            }
+
+                                            setDose('');
+                                            setQuantity('');
+                                            setEditingProductIndex(null);
+                                            setShowDoseModal(false);
+                                        }}
+                                    >
+                                        <Text style={styles.modalOkText}>OK</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
                         </Modal>
                     </View>
                     )}
@@ -754,12 +1035,8 @@ const serviceFormData = {
                         <TouchableOpacity
                             style={styles.saveSectionButton}
                             onPress={() => {
-                            if (!completedSections.includes(section.id)) {
-                                setCompletedSections([...completedSections, section.id]);
-                            }
-
-                            alert('Pago del servicio guardado');
-                            }}
+                            completeSection(section.id);
+                        }}
                         >
                             <MaterialIcons name="keyboard-arrow-down" size={28} color="#2094C9" />
                             <Text style={styles.saveSectionText}>GUARDAR</Text>
@@ -848,6 +1125,7 @@ const serviceFormData = {
                                     </TouchableOpacity>
                                 </View>
                             </View>
+
                         </Modal>
 
                             <View style={styles.clientRow}>
@@ -907,6 +1185,37 @@ const serviceFormData = {
                 </View>
             );
         })}
+
+        <Modal visible={showPhotoOptionsModal} transparent animationType="fade">
+            <View style={styles.modalBackground}>
+                <View style={styles.photoOptionsModal}>
+                    <Text style={styles.photoOptionsTitle}>
+                        Seleccione una opción:
+                    </Text>
+
+                    <TouchableOpacity
+                        style={styles.photoOptionItem}
+                        onPress={selectCameraPhoto}
+                    >
+                        <Text style={styles.photoOptionText}>Tomar Foto</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.photoOptionItem}
+                        onPress={selectGalleryPhoto}
+                    >
+                        <Text style={styles.photoOptionText}>Desde Galería</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.photoOptionItem}
+                        onPress={() => setShowPhotoOptionsModal(false)}
+                    >
+                        <Text style={styles.photoOptionText}>Cancelar</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </Modal>
     </ScrollView>
 
         <View style={styles.bottomButtons}>
@@ -918,23 +1227,35 @@ const serviceFormData = {
             </TouchableOpacity>
 
             <TouchableOpacity
-            style={[
-                styles.finishButton,
-                !isFormCompleted && styles.finishButtonDisabled,
-            ]}
-            disabled={!isFormCompleted}
-            >
-            <Text
                 style={[
-                styles.finishButtonText,
-                !isFormCompleted && styles.finishButtonTextDisabled,
+                    styles.finishButton,
+                    !isFormCompleted && styles.finishButtonDisabled,
                 ]}
-                onPress={() => router.push('/service-detail')}
+                disabled={!isFormCompleted}
+                onPress={() => {
+                    const finishedHour = new Date().toLocaleTimeString('es-MX', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false,
+                    });
+
+                    setEndTime(finishedHour);
+
+                    setTimeout(() => {
+                        router.push('/service-detail');
+                    }, 2000);
+                }}
             >
-                Finalizar Servicio
-            </Text>
+                <Text
+                    style={[
+                        styles.finishButtonText,
+                        !isFormCompleted && styles.finishButtonTextDisabled,
+                    ]}
+                >
+                    Finalizar Servicio
+                </Text>
             </TouchableOpacity>
-        </View>
+            </View>
         </View>
     );
     }
@@ -985,7 +1306,7 @@ const serviceFormData = {
         height: 72,
         backgroundColor: '#FFFFFF',
         marginHorizontal: 15,
-        marginBottom: 15,
+        marginBottom: 6,
         borderRadius: 3,
         elevation: 3,
         flexDirection: 'row',
@@ -994,7 +1315,6 @@ const serviceFormData = {
     },
 
     sectionTitle: {
-        flex: 1,
         fontSize: 21,
         color: '#222222',
         marginLeft: 25,
@@ -1054,318 +1374,321 @@ const serviceFormData = {
     finishButtonTextDisabled: {
         color: '#8A8A8A',
     },
+
     sectionWrapper: {
-    marginBottom: 15,
+        marginBottom: 6,
     },
 
     formContainer: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 15,
-    marginTop: -15,
-    marginBottom: 15,
-    paddingHorizontal: 25,
-    paddingTop: 20,
-    paddingBottom: 25,
-    elevation: 3,
+        backgroundColor: '#FFFFFF',
+        marginHorizontal: 15,
+        marginTop: -15,
+        marginBottom: 15,
+        paddingHorizontal: 25,
+        paddingTop: 20,
+        paddingBottom: 25,
+        elevation: 3,
     },
 
     formTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 20,
     },
 
     selectButton: {
-    backgroundColor: '#5BC0AA',
-    height: 44,
-    paddingHorizontal: 10,
-    borderRadius: 5,
-    flexDirection: 'row',
-    alignItems: 'center',
+        backgroundColor: '#5BC0AA',
+        height: 44,
+        paddingHorizontal: 10,
+        borderRadius: 5,
+        flexDirection: 'row',
+        alignItems: 'center',
     },
 
     selectButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    letterSpacing: 3,
-    marginLeft: 10,
+        color: '#FFFFFF',
+        fontSize: 14,
+        letterSpacing: 3,
+        marginLeft: 10,
     },
 
     photoButton: {
-    borderWidth: 1,
-    borderColor: '#DDDDDD',
-    borderRadius: 5,
-    paddingVertical: 12,
-    paddingHorizontal: 15,
-    backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#DDDDDD',
+        borderRadius: 5,
+        paddingVertical: 12,
+        paddingHorizontal: 15,
+        backgroundColor: '#FFFFFF',
     },
 
     photoButtonText: {
-    color: '#2094C9',
-    fontSize: 14,
-    fontWeight: 'bold',
-    letterSpacing: 2,
+        color: '#2094C9',
+        fontSize: 14,
+        fontWeight: 'bold',
+        letterSpacing: 2,
     },
 
     label: {
-    fontSize: 17,
-    color: '#3D5A96',
-    marginBottom: 10,
+        fontSize: 17,
+        color: '#3D5A96',
+        marginBottom: 10,
     },
 
     textArea: {
-    height: 70,
-    borderWidth: 1,
-    borderColor: '#999999',
-    borderRadius: 5,
-    marginBottom: 20,
-    paddingHorizontal: 15,
-    fontSize: 18,
+        height: 70,
+        borderWidth: 1,
+        borderColor: '#999999',
+        borderRadius: 5,
+        marginBottom: 20,
+        paddingHorizontal: 15,
+        fontSize: 18,
     },
 
     input: {
-    height: 65,
-    borderWidth: 1,
-    borderColor: '#999999',
-    borderRadius: 5,
-    marginBottom: 20,
-    paddingHorizontal: 15,
-    fontSize: 18,
-    color: '#3D5A96',
+        height: 65,
+        borderWidth: 1,
+        borderColor: '#999999',
+        borderRadius: 5,
+        marginBottom: 20,
+        paddingHorizontal: 15,
+        fontSize: 18,
+        color: '#3D5A96',
     },
 
     saveSectionButton: {
-    alignSelf: 'flex-end',
-    borderWidth: 1,
-    borderColor: '#DDDDDD',
-    borderRadius: 5,
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    flexDirection: 'row',
-    alignItems: 'center',
+        alignSelf: 'flex-end',
+        borderWidth: 1,
+        borderColor: '#DDDDDD',
+        borderRadius: 5,
+        paddingVertical: 12,
+        paddingHorizontal: 25,
+        flexDirection: 'row',
+        alignItems: 'center',
     },
 
     saveSectionText: {
-    color: '#2094C9',
-    fontSize: 18,
-    fontWeight: 'bold',
-    letterSpacing: 2,
-    marginLeft: 8,
+        color: '#2094C9',
+        fontSize: 18,
+        fontWeight: 'bold',
+        letterSpacing: 2,
+        marginLeft: 8,
     },
     
     optionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 15,
     },
 
     optionValue: {
-    fontSize: 16,
-    color: '#222222',
-    marginRight: 120,
+        fontSize: 16,
+        color: '#222222',
+        marginRight: 120,
     },
 
     pesticideRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#999999',
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    marginBottom: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#999999',
+        borderRadius: 5,
+        paddingHorizontal: 10,
+        marginBottom: 20,
     },
 
     pesticideInput: {
-    flex: 1,
-    height: 55,
-    fontSize: 16,
+        flex: 1,
+        height: 55,
+        fontSize: 16,
     },
 
     bottomFormButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 10,
     },
 
     newAreaButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E5E5E5',
-    borderRadius: 4,
-    paddingHorizontal: 12,
-    height: 45,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#E5E5E5',
+        borderRadius: 4,
+        paddingHorizontal: 12,
+        height: 45,
     },
 
     newAreaText: {
-    color: '#999999',
-    fontSize: 11,
-    marginLeft: 5,
-    letterSpacing: 1,
+        color: '#999999',
+        fontSize: 11,
+        marginLeft: 5,
+        letterSpacing: 1,
     },
 
     selectRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginLeft: 25,
-    marginBottom: 25,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginLeft: 25,
+        marginBottom: 25,
     },
 
     selectValue: {
-    fontSize: 16,
-    color: '#222222',
+        fontSize: 16,
+        color: '#222222',
     },
 
     paymentBottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
     },
 
     checkboxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+        flexDirection: 'row',
+        alignItems: 'center',
     },
 
     checkbox: {
-    width: 18,
-    height: 18,
-    borderWidth: 1,
-    borderColor: '#666666',
-    marginRight: 8,
+        width: 18,
+        height: 18,
+        borderWidth: 1,
+        borderColor: '#666666',
+        marginRight: 8,
     },
 
     checkboxText: {
-    color: '#3D5A96',
-    fontSize: 13,
+        color: '#3D5A96',
+        fontSize: 13,
     },
     signatureHeader: {
-    alignItems: 'flex-end',
-    marginBottom: 15,
+        alignItems: 'flex-end',
+        marginBottom: 15,
     },
 
     noticeBox: {
-    borderWidth: 1,
-    borderColor: '#BDBDBD',
-    padding: 10,
-    marginBottom: 15,
+        borderWidth: 1,
+        borderColor: '#BDBDBD',
+        padding: 10,
+        marginBottom: 15,
     },
 
     noticeText: {
-    fontSize: 11,
-    textAlign: 'center',
-    color: '#444444',
+        fontSize: 11,
+        textAlign: 'center',
+        color: '#444444',
     },
 
     signatureArea: {
-    width: '100%',
-    height: 180,
-    borderWidth: 1,
-    borderColor: '#CCCCCC',
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 15,
-    marginBottom: 15,
+        width: '100%',
+        height: 180,
+        borderWidth: 1,
+        borderColor: '#CCCCCC',
+        borderRadius: 10,
+        backgroundColor: '#FFFFFF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 15,
+        marginBottom: 15,
     },
 
     clientRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 15,
     },
 
     clientName: {
-    fontSize: 16,
-    color: '#3D5A96',
-    marginLeft: 10,
+        fontSize: 16,
+        color: '#3D5A96',
+        marginLeft: 10,
     },
 
     signatureDate: {
-    textAlign: 'center',
-    color: '#555555',
-    fontSize: 14,
-    marginBottom: 20,
+        textAlign: 'center',
+        color: '#555555',
+        fontSize: 14,
+        marginBottom: 20,
     },
     optionsBox: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#DDDDDD',
-    borderRadius: 5,
-    marginBottom: 15,
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#DDDDDD',
+        borderRadius: 5,
+        marginBottom: 15,
     },
 
     optionItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
+        paddingVertical: 10,
+        paddingHorizontal: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#EEEEEE',
     },
 
     optionItemText: {
-    fontSize: 16,
-    color: '#222222',
+        fontSize: 16,
+        color: '#222222',
     },
 
     inputText: {
-    color: '#3D5A96',
-    fontSize: 18,
-    marginTop: 20,
+        color: '#3D5A96',
+        fontSize: 18,
+        marginTop: 20,
     },
 
     modalBackground: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 
     modalContent: {
-    width: '85%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 20,
+        width: '85%',
+        maxHeight: '85%',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 8,
+        padding: 20,
     },
 
     modalTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 15,
+        fontSize: 22,
+        fontWeight: 'bold',
+        marginBottom: 15,
     },
 
     photoPreview: {
-    width: '100%',
-    height: 180,
-    borderRadius: 8,
-    marginBottom: 15,
+        width: '100%',
+        height: 300,
+        borderRadius: 8,
+        marginBottom: 15,
     },
 
     closeModalButton: {
-    backgroundColor: '#2094C9',
-    paddingVertical: 12,
-    borderRadius: 5,
-    alignItems: 'center',
+        backgroundColor: '#2094C9',
+        paddingVertical: 12,
+        borderRadius: 5,
+        alignItems: 'center',
     },
 
     closeModalText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+        color: '#FFFFFF',
+        fontWeight: 'bold',
     },
+
     iconsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+        flexDirection: 'row',
+        alignItems: 'center',
     },
 
     qrIcon: {
-    marginRight: 18,
+        marginRight: 18,
     },
 
     pesticideText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#444444',
+        flex: 1,
+        fontSize: 16,
+        color: '#444444',
     },
 
     signaturePlaceholder: {
@@ -1388,10 +1711,10 @@ const serviceFormData = {
     },
 
     cancelSignatureButton: {
-    flex: 1,
-    backgroundColor: '#CCCCCC',
-    justifyContent: 'center',
-    alignItems: 'center',
+        flex: 1,
+        backgroundColor: '#CCCCCC',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 
     cancelSignatureText: {
@@ -1401,25 +1724,225 @@ const serviceFormData = {
     },
 
     signatureModalContainer: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
+        flex: 1,
+        backgroundColor: '#FFFFFF',
     },
 
     signatureButtonsRow: {
-    flexDirection: 'row',
-    height: 70,
+        flexDirection: 'row',
+        height: 70,
     },
 
     doneSignatureButton: {
-    flex: 1,
-    backgroundColor: '#2094C9',
-    justifyContent: 'center',
-    alignItems: 'center',
+        flex: 1,
+        backgroundColor: '#2094C9',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 
     doneSignatureText: {
         color: '#FFFFFF',
         fontSize: 18,
         fontWeight: 'bold',
+    },
+
+        okPlaguesButton: {
+        alignSelf: 'flex-end',
+        padding: 12,
+    },
+
+    okPlaguesText: {
+        color: '#2094C9',
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+
+    infestationModal: {
+        width: '85%',
+        maxHeight: '70%',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 4,
+        padding: 20,
+    },
+
+    infestationItem: {
+        marginBottom: 20,
+    },
+
+    infestationTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 10,
+    },
+
+    infestationSelect: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: '#DDD',
+        paddingVertical: 10,
+    },
+
+    infestationValue: {
+        fontSize: 16,
+        color: '#333',
+    },
+
+    infestationOptionsBox: {
+        borderWidth: 1,
+        borderColor: '#DDD',
+        marginTop: 5,
+    },
+
+    infestationOption: {
+        padding: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#EEE',
+    },
+
+    infestationOptionText: {
+        fontSize: 15,
+    },
+
+    modalOkButton: {
+        alignSelf: 'flex-end',
+        marginTop: 10,
+    },
+
+    modalOkText: {
+        color: '#2094C9',
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+
+    doseModal: {
+    width: '85%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+    padding: 20,
+    },
+
+    refreshButton: {
+        alignSelf: 'flex-end',
+        marginBottom: 15,
+    },
+
+    appliedProductCard: {
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#EEEEEE',
+        padding: 12,
+        marginBottom: 15,
+        elevation: 2,
+    },
+
+    appliedProductName: {
+        color: '#3D5A96',
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: 10,
+    },
+
+    appliedProductInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+
+    appliedProductValue: {
+        color: '#2094C9',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+
+    editButton: {
+        backgroundColor: '#2094C9',
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+        borderRadius: 4,
+    },
+
+    editButtonText: {
+        color: '#FFFFFF',
+        fontWeight: 'bold',
+        fontSize: 12,
+    },
+
+    deleteButton: {
+        backgroundColor: '#D6402F',
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+        borderRadius: 4,
+    },
+
+    deleteButtonText: {
+        color: '#FFFFFF',
+        fontWeight: 'bold',
+        fontSize: 12,
+    },
+
+    photoOptionsModal: {
+    width: '85%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    },
+
+    photoOptionsTitle: {
+        fontSize: 18,
+        color: '#222222',
+        marginBottom: 15,
+    },
+
+    photoOptionItem: {
+        paddingVertical: 14,
+    },
+
+    photoOptionText: {
+        fontSize: 16,
+        color: '#333333',
+    },
+
+    photoItem: {
+    marginBottom: 20,
+    },
+
+    photoCommentInput: {
+        height: 50,
+        borderWidth: 1,
+        borderColor: '#CCCCCC',
+        borderRadius: 5,
+        paddingHorizontal: 10,
+        marginTop: 8,
+        color: '#3D5A96',
+    },
+
+    photosScroll: {
+    maxHeight: 520,
+    },
+
+    photosScrollContent: {
+        paddingBottom: 20,
+    },
+
+    sectionTitleContainer: {
+    flex: 1,
+    marginLeft: 25,
+    },
+
+    completedRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 2,
+        marginLeft: 26,
+    },
+
+    completedText: {
+        color: '#5BC0AA',
+        fontSize: 13,
+        marginRight: 5,
     },
 });

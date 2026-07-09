@@ -11,8 +11,7 @@ export default function Menu() {
         options: [
         { id: 1, icon: 'business-center', label: 'Mi Inventario' },
         { id: 2, icon: 'calendar-today', label: 'Mi Agenda' },
-        { id: 3, icon: 'access-time', label: 'Reloj Checador' },
-        { id: 4, icon: 'exit-to-app', label: 'Cerrar sesión' },
+        { id: 3, icon: 'exit-to-app', label: 'Cerrar sesión' },
         ],
     };
 
@@ -50,9 +49,6 @@ export default function Menu() {
                                     router.push('/agenda');
                                     break;
                                 case 3:
-                                    router.push('/attendance');
-                                    break;
-                                case 4:
                                     router.push('/login');
                                     break;
                             }
@@ -174,7 +170,7 @@ export default function Menu() {
 
     optionText: {
         flex: 1,
-        fontSize: 25,
+        fontSize: 20,
         color: '#222222',
     },
 
@@ -194,7 +190,7 @@ export default function Menu() {
     },
 
     menuIcon: {
-        fontSize: 34,
+        fontSize: 30,
         color: '#666666',
     },
 

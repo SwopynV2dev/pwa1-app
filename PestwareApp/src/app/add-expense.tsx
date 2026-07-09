@@ -6,13 +6,49 @@ import { Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 export default function AddExpense() {
-    const expenseForm = {
-        title: 'Captura de Gasto',
-        concept: 'Gasolina',
-        paymentWay: 'Contado',
-        paymentMethod: 'Efectivo',
-        receiptType: 'Factura',
-    };
+    const concepts = [
+    'Gasolina',
+    'Casetas',
+    'Estacionamiento',
+    'Comida',
+    'Hospedaje',
+    'Papelería',
+    'Refacciones',
+    'Mantenimiento',
+    'Herramientas',
+    'Material de limpieza',
+    ];
+
+    const paymentWays = ['Contado', 'A meses'];
+
+    const paymentMethods = [
+        'Efectivo',
+        'Tarjeta de Crédito',
+        'Tarjeta de Débito',
+        'Transferencia',
+        'Deposito',
+        'Cheque',
+    ];
+
+    const receiptTypes = [
+        'Factura',
+        'Nota de venta',
+        'Ticket',
+        'Recibo',
+        'Sin comprobante',
+    ];
+
+    const [concept, setConcept] = useState('Gasolina');
+    const [paymentWay, setPaymentWay] = useState('Contado');
+    const [paymentMethod, setPaymentMethod] = useState('Efectivo');
+    const [receiptType, setReceiptType] = useState('Factura');
+
+    const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+
+    const [expenseName, setExpenseName] = useState('');
+    const [description, setDescription] = useState('');
+    const [article, setArticle] = useState('');
+    const [amount, setAmount] = useState('');
 
     const [photo, setPhoto] = useState<string | null>(null);
 
@@ -34,70 +70,134 @@ export default function AddExpense() {
         }
         };
 
+        const renderDropdown = (
+            title: string,
+            value: string,
+            options: string[],
+            type: string,
+            onSelect: (value: string) => void
+        ) => (
+            <View>
+                <Text style={styles.label}>{title}</Text>
+
+                <TouchableOpacity
+                    style={styles.dropdownButton}
+                    onPress={() =>
+                        setOpenDropdown(openDropdown === type ? null : type)
+                    }
+                >
+                    <Text style={styles.dropdownText}>{value}</Text>
+                    <MaterialIcons
+                        name="keyboard-arrow-down"
+                        size={28}
+                        color="#3D5A96"
+                    />
+                </TouchableOpacity>
+
+                {openDropdown === type && (
+                    <View style={styles.dropdownList}>
+                        {options.map((option) => (
+                            <TouchableOpacity
+                                key={option}
+                                style={styles.dropdownItem}
+                                onPress={() => {
+                                    onSelect(option);
+                                    setOpenDropdown(null);
+                                }}
+                            >
+                                <Text style={styles.dropdownItemText}>{option}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                )}
+            </View>
+        );
+
     return (
         <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.content}>
             <View style={styles.header}>
-            <Text style={styles.close} onPress={() => router.push('/expenses')}>×</Text>
-            <Text style={styles.headerTitle}>{expenseForm.title}</Text>
+                <Text style={styles.close} onPress={() => router.push('/expenses')}>×</Text>
+                <Text style={styles.headerTitle}>Captura de Gasto</Text>
             </View>
 
             <TextInput
-            placeholder="Nombre del gasto"
-            style={styles.input}
+                placeholder="Nombre del gasto"
+                style={styles.input}
+                value={expenseName}
+                onChangeText={setExpenseName}
             />
 
             <TextInput
-            placeholder="Descripción"
-            style={styles.input}
+                placeholder="Descripción"
+                style={styles.input}
+                value={description}
+                onChangeText={setDescription}
             />
 
-            <Text style={styles.label}>Concepto</Text>
-            <Text style={styles.optionText}>{expenseForm.concept}</Text>
+            {renderDropdown('Concepto', concept, concepts, 'concept', setConcept)}
 
-            <Text style={styles.label}>Forma de pago</Text>
-            <Text style={styles.optionText}>{expenseForm.paymentWay}</Text>
+            {renderDropdown('Forma de pago', paymentWay, paymentWays, 'paymentWay', setPaymentWay)}
 
-            <Text style={styles.label}>Método de pago</Text>
-            <Text style={styles.optionText}>{expenseForm.paymentMethod}</Text>
+            {renderDropdown('Método de pago', paymentMethod, paymentMethods, 'paymentMethod', setPaymentMethod)}
 
             <TextInput
-            placeholder="Concepto / Articulo"
-            style={styles.input}
+                placeholder="Concepto / Articulo"
+                style={styles.input}
+                value={article}
+                onChangeText={setArticle}
             />
 
             <TextInput
-            placeholder="Monto"
-            style={styles.input}
-            keyboardType="numeric"
+                placeholder="Monto"
+                style={styles.input}
+                keyboardType="numeric"
+                value={amount}
+                onChangeText={setAmount}
             />
 
-            <Text style={styles.label}>Tipo de comprobante</Text>
-            <Text style={styles.optionText}>{expenseForm.receiptType}</Text>
+            {renderDropdown('Tipo de comprobante', receiptType, receiptTypes, 'receiptType', setReceiptType)}
 
             <TextInput style={styles.receiptInput} />
 
-            <View style={styles.bottomSection}>
-            <TouchableOpacity onPress={takePhoto}>
-                <MaterialIcons
-                    name="add-a-photo"
-                    size={60}
-                    color="#438FC2"
-                />
-            </TouchableOpacity>
+                <View style={styles.bottomSection}>
+                    <TouchableOpacity onPress={takePhoto}>
+                        <MaterialIcons
+                            name="add-a-photo"
+                            size={60}
+                            color="#438FC2"
+                        />
+                    </TouchableOpacity>
 
-            <TouchableOpacity style={styles.saveButton}>
-                <Text style={styles.saveButtonText}>Guardar Gasto</Text>
-            </TouchableOpacity>
-            </View>
+                    <TouchableOpacity
+                        style={styles.saveButton}
+                        onPress={() =>
+                            router.push({
+                                pathname: '/expenses',
+                                params: {
+                                    expenseName,
+                                    description,
+                                    concept,
+                                    paymentWay,
+                                    paymentMethod,
+                                    article,
+                                    amount,
+                                    receiptType,
+                                },
+                            })
+                        }
+                    >
+                        <Text style={styles.saveButtonText}>Guardar Gasto</Text>
+                    </TouchableOpacity>
+                </View>
 
-            {photo && (
-                <Image
-                    source={{ uri: photo }}
-                    style={styles.photoPreview}
-                />
-                )}
-        </ScrollView>
+                {photo && (
+                    <Image
+                        source={{ uri: photo }}
+                        style={styles.photoPreview}
+                    />
+                    )}
+            </ScrollView>
         </View>
     );
     }
@@ -193,9 +293,43 @@ export default function AddExpense() {
         letterSpacing: 3,
     },
     photoPreview: {
-    width: 180,
-    height: 120,
-    marginTop: 15,
-    borderRadius: 8,
+        width: 180,
+        height: 120,
+        marginTop: 15,
+        borderRadius: 8,
+    },
+
+    dropdownButton: {
+        height: 50,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 30,
+        marginBottom: 12,
+    },
+
+    dropdownText: {
+        fontSize: 22,
+        color: '#111111',
+    },
+
+    dropdownList: {
+        borderWidth: 1,
+        borderColor: '#DDDDDD',
+        borderRadius: 5,
+        marginBottom: 20,
+        backgroundColor: '#FFFFFF',
+    },
+
+    dropdownItem: {
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#EEEEEE',
+    },
+
+    dropdownItemText: {
+        fontSize: 18,
+        color: '#111111',
     },
     });
