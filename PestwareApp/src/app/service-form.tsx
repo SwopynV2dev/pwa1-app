@@ -5,6 +5,11 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Image, Modal, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Signature from 'react-native-signature-canvas';
+import { savePlaceInspection } from '../database/placeInspectionsDb';
+import { savePlagueControl } from '../database/plagueControlsDb';
+import { saveCash } from '../database/cashesDb';
+import { saveServiceFirm } from '../database/serviceFirmsDb';
+
 
 type PhotoItem = {
     uri: string;
@@ -33,6 +38,7 @@ const serviceFormData = {
     const [showPlagueOptions, setShowPlagueOptions] = useState(false);
     const [showPhotos, setShowPhotos] = useState(false);
     const [nestingAreas, setNestingAreas] = useState('');
+    const [inspectionCommentary, setInspectionCommentary] = useState('');
     const [showInfestationModal, setShowInfestationModal] = useState(false);
     const [infestationLevels, setInfestationLevels] = useState<{ [key: string]: string }>({});
     const [openInfestationPlague, setOpenInfestationPlague] = useState<string | null>(null);
@@ -54,6 +60,7 @@ const serviceFormData = {
     const [selectedPesticide, setSelectedPesticide] = useState('');
     const [controlPhotos, setControlPhotos] = useState<PhotoItem[]>([]);
     const [controlArea, setControlArea] = useState('');
+    const [controlCommentary, setControlCommentary] = useState('');
 
     const [showMethods, setShowMethods] = useState(false);
     const [showPesticides, setShowPesticides] = useState(false);
@@ -76,6 +83,8 @@ const serviceFormData = {
     const [showPaymentMethods, setShowPaymentMethods] = useState(false);
     const [showPaymentTypes, setShowPaymentTypes] = useState(false);
     const [clientDidNotPay, setClientDidNotPay] = useState(false);
+    const [amountReceived, setAmountReceived] = useState('');
+    const [paymentCommentary, setPaymentCommentary] = useState('');
 
     const paymentMethodOptions = ['Efectivo', 'Tarjeta de Crédito', 'Tarjeta de Débito' , 'Transferencia', 'Deposito' , 'Cheque'];
     const paymentTypeOptions = ['Contado', 'A meses'];
@@ -90,6 +99,7 @@ const serviceFormData = {
     const [signature, setSignature] = useState<string | null>(null);
     const [showSignaturePad, setShowSignaturePad] = useState(false);
     const signatureRef = useRef<any>(null);
+    const [signatureOtherName, setSignatureOtherName] = useState('');
 
     //Hora fin
     const [startTime, setStartTime] = useState('');
@@ -242,26 +252,139 @@ const serviceFormData = {
         }
     };
 
-        //Botón guardar
-        const completeSection = (sectionId: number) => {
-        if (!completedSections.includes(sectionId)) {
-            setCompletedSections([...completedSections, sectionId]);
-        }
+        // Botón guardar
+            const completeSection = (sectionId: number) => {
+                try {
+                    // Sección 1: Inspección del lugar
+                    if (
+                        sectionId === 1 &&
+                        !completedSections.includes(sectionId)
+                    ) {
+                        const now = new Date().toISOString();
 
-        // Cierra la sección actual
-        setOpenSections(
-            openSections.filter(id => id !== sectionId)
-        );
+                        const placeInspectionId = savePlaceInspection({
+                            // serviceId actualmente vale 1 de manera temporal.
+                            // Después se reemplazará por el ID real del servicio.
+                            id_service_order: serviceId,
+                            nesting_areas: nestingAreas.trim(),
+                            commentary: inspectionCommentary.trim(),
+                            created_at: now,
+                            updated_at: now,
+                        });
 
-        // Abre la siguiente sección
-        const nextSection = serviceFormData.sections.find(
-            section => section.id === sectionId + 1
-        );
+                        console.log(
+                            'Inspección del lugar guardada con ID:',
+                            placeInspectionId
+                        );
+                    }
 
-        if (nextSection) {
-            setOpenSections([nextSection.id]);
-        }
-    };
+                    // Sección 3: Control de plagas
+                    if (
+                        sectionId === 3 &&
+                        !completedSections.includes(sectionId)
+                    ) {
+                        const now = new Date().toISOString();
+
+                        const plagueControlId = savePlagueControl({
+                            id_service_order: serviceId,
+                            control_areas: controlArea.trim(),
+                            commentary: controlCommentary.trim(),
+                            created_at: now,
+                            updated_at: now,
+                        });
+
+                        console.log(
+                            'Control de plagas guardado con ID:',
+                            plagueControlId
+                        );
+                    }
+
+                    // Sección 4: Pago del servicio
+                        if (
+                            sectionId === 4 &&
+                            !completedSections.includes(sectionId)
+                        ) {
+                            const now = new Date().toISOString();
+
+                            // const paymentMethodIds: Record<string, number> = {
+                            //     Efectivo: 1,
+                            //     'Tarjeta de Crédito': 2,
+                            //     'Tarjeta de Débito': 3,
+                            //     Transferencia: 4,
+                            //     Deposito: 5,
+                            //     Cheque: 6,
+                            // };
+
+                            // const paymentWayIds: Record<string, number> = {
+                            //     Contado: 1,
+                            //     'A meses': 2,
+                            // };
+
+                            const cashId = saveCash({
+                                id_service_order: serviceId,
+                                id_event: undefined,
+                                id_payment_method: undefined,
+                                id_payment_way: undefined,
+                                companie: undefined,
+                                amount_received: amountReceived
+                                    ? Number(amountReceived)
+                                    : 0,
+                                commentary: paymentCommentary.trim(),
+                                payment: clientDidNotPay ? 0 : 1,
+                                created_at: now,
+                                updated_at: now,
+                                // id_service_order: serviceId,
+                                // id_event: undefined,
+                                // id_payment_method: paymentMethodIds[paymentMethod],
+                                // id_payment_way: paymentWayIds[paymentType],
+                                // companie: undefined,
+                                // amount_received: amountReceived
+                                //     ? Number(amountReceived)
+                                //     : 0,
+                                // commentary: paymentCommentary.trim(),
+                                // payment: clientDidNotPay ? 0 : 1,
+                                // created_at: now,
+                                // updated_at: now,
+                            });
+
+                            console.log(
+                                'Pago guardado con ID:',
+                                cashId
+                            );
+                        }
+
+                    if (!completedSections.includes(sectionId)) {
+                        setCompletedSections((previousSections) => [
+                            ...previousSections,
+                            sectionId,
+                        ]);
+                    }
+
+                    // Cierra la sección actual
+                    setOpenSections((previousSections) =>
+                        previousSections.filter((id) => id !== sectionId)
+                    );
+
+                    // Abre la siguiente sección
+                    const nextSection = serviceFormData.sections.find(
+                        (section) => section.id === sectionId + 1
+                    );
+
+                    if (nextSection) {
+                        setOpenSections([nextSection.id]);
+                    }
+                } catch (error) {
+                    console.error(
+                        'Error al guardar la sección:',
+                        error
+                    );
+
+                    Alert.alert(
+                        'Error',
+                        'No se pudo guardar la información localmente.'
+                    );
+                }
+            };
 
     const isFormCompleted = completedSections.length === serviceFormData.sections.length;
 
@@ -403,9 +526,11 @@ const serviceFormData = {
                             />
 
                             <TextInput
-                            placeholder="Comentarios"
-                            placeholderTextColor="#3D5A96"
-                            style={styles.input}
+                                placeholder="Comentarios"
+                                placeholderTextColor="#3D5A96"
+                                style={styles.input}
+                                value={inspectionCommentary}
+                                onChangeText={setInspectionCommentary}
                             />
 
                             <TouchableOpacity
@@ -819,9 +944,11 @@ const serviceFormData = {
                         ))}
 
                         <TextInput
-                        placeholder="Comentarios"
-                        placeholderTextColor="#3D5A96"
-                        style={styles.input}
+                            placeholder="Comentarios"
+                            placeholderTextColor="#3D5A96"
+                            style={styles.input}
+                            value={controlCommentary}
+                            onChangeText={setControlCommentary}
                         />
 
                         <View style={styles.bottomFormButtons}>
@@ -1006,16 +1133,20 @@ const serviceFormData = {
                         )}
 
                         <TextInput
-                        placeholder="Importe recibido"
-                        placeholderTextColor="#3D5A96"
-                        style={styles.input}
-                        keyboardType="numeric"
+                            placeholder="Importe recibido"
+                            placeholderTextColor="#3D5A96"
+                            style={styles.input}
+                            keyboardType="numeric"
+                            value={amountReceived}
+                            onChangeText={setAmountReceived}
                         />
 
                         <TextInput
-                        placeholder="Comentarios"
-                        placeholderTextColor="#3D5A96"
-                        style={styles.input}
+                            placeholder="Comentarios"
+                            placeholderTextColor="#3D5A96"
+                            style={styles.input}
+                            value={paymentCommentary}
+                            onChangeText={setPaymentCommentary}
                         />
 
                         <View style={styles.paymentBottomRow}>
@@ -1141,9 +1272,11 @@ const serviceFormData = {
                             </View>
 
                             <TextInput
-                            placeholder="Nombre de quien firma o recibe (opcional)"
-                            placeholderTextColor="#888888"
-                            style={styles.input}
+                                placeholder="Nombre de quien firma o recibe (opcional)"
+                                placeholderTextColor="#888888"
+                                style={styles.input}
+                                value={signatureOtherName}
+                                onChangeText={setSignatureOtherName}
                             />
 
                             <Text style={styles.signatureDate}>
@@ -1153,31 +1286,63 @@ const serviceFormData = {
                             <TouchableOpacity
                                 style={styles.saveSectionButton}
                                 onPress={() => {
-
                                     if (!signature) {
-                                        alert('Primero realiza la firma');
+                                        Alert.alert(
+                                            'Firma requerida',
+                                            'Primero realiza la firma.'
+                                        );
                                         return;
                                     }
 
-                                    if (!completedSections.includes(section.id)) {
-                                        setCompletedSections([
-                                            ...completedSections,
-                                            section.id,
-                                        ]);
-                                    }
+                                    try {
+                                        const now = new Date().toISOString();
 
-                                    alert('Firma guardada');
+                                        const serviceFirmId = saveServiceFirm({
+                                            id_service_order: serviceId,
+                                            file_route: signature,
+                                            other_name: signatureOtherName.trim(),
+                                            created_at: now,
+                                            updated_at: now,
+                                        });
+
+                                        console.log(
+                                            'Firma guardada con ID:',
+                                            serviceFirmId
+                                        );
+
+                                        if (!completedSections.includes(section.id)) {
+                                            setCompletedSections((previousSections) => [
+                                                ...previousSections,
+                                                section.id,
+                                            ]);
+                                        }
+
+                                        Alert.alert(
+                                            'Guardado',
+                                            'La firma se guardó localmente.'
+                                        );
+                                    } catch (error) {
+                                        console.error(
+                                            'Error al guardar la firma:',
+                                            error
+                                        );
+
+                                        Alert.alert(
+                                            'Error',
+                                            'No se pudo guardar la firma.'
+                                        );
+                                    }
                                 }}
                             >
-                            <MaterialIcons
-                                name="keyboard-arrow-down"
-                                size={28}
-                                color="#2094C9"
-                            />
+                                <MaterialIcons
+                                    name="keyboard-arrow-down"
+                                    size={28}
+                                    color="#2094C9"
+                                />
 
-                            <Text style={styles.saveSectionText}>
-                                GUARDAR
-                            </Text>
+                                <Text style={styles.saveSectionText}>
+                                    GUARDAR
+                                </Text>
                             </TouchableOpacity>
 
                         </View>
