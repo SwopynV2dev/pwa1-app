@@ -1,10 +1,14 @@
 import { apiRequest } from "./apiClient";
 import { ENDPOINTS } from "./endpoints";
+import { TodayService } from "./types";
 
-export const getServices = () => {
-    return apiRequest(ENDPOINTS.SERVICES);
-};
-
-export const getServiceById = (id: number) => {
-    return apiRequest(ENDPOINTS.SERVICE_DETAIL(id));
+export const getTodayServicesByEmployee = async (
+    employeeId: number
+): Promise<TodayService[]> => {
+    return apiRequest<TodayService[]>(
+        ENDPOINTS.SERVICES_TODAY_BY_EMPLOYEE(employeeId),
+        {
+            method: "GET",
+        }
+    );
 };

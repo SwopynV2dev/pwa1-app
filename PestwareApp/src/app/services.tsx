@@ -1,11 +1,16 @@
-import {View,Text,StyleSheet,ScrollView,TouchableOpacity,} from 'react-native';
+import {View,Text,StyleSheet,ScrollView,TouchableOpacity,ActivityIndicator,Alert,} from 'react-native';
 import { router } from 'expo-router';
 import BottomMenu from './BottomMenu';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { getTodayServicesByEmployee } from '../api/servicesService';
+import { TodayService } from '../api/types';
 
 export default function Services() {
     const [selectedDate, setSelectedDate] = useState(new Date());
+    const [services, setServices] = useState<TodayService[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [errorMessage, setErrorMessage] = useState('');
 
     const monthNames = [
         'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -32,58 +37,63 @@ export default function Services() {
 
 const days = getWeekDays(selectedDate);
 
-const services = [
-    {
-        id: 1,
-        fullDate: '2026-06-11T17:00:00',
-        date: 'Jun 11',
-        time: '04:00 am',
-        title: 'Hotel Santorini Casa Blanca - Servicio MIPU',
-        phone: '3176000359',
-        address: 'Km 17 Via Cienaga, Piedra Hincada',
-        type: 'MIPU',
-        status: 'Finalizado',
-        paymentStatus: 'Pagado',
-    },
-    {
-        id: 2,
-        fullDate: '2026-06-18T07:00:00',
-        date: 'Jun 18',
-        time: '07:00 am',
-        title: 'Santa Marta Marriott Resort Playa Dormida - Servicio de Desinsectación y Desratizacion',
-        phone: '',
-        address: '',
-        type: 'DE y DE',
-        status: 'Comenzado',
-        paymentStatus: '',
-    },
-    {
-        id: 3,
-        fullDate: '2026-06-16T13:00:00',
-        date: 'Jun 16',
-        time: '01:00 pm',
-        title: 'Comercializadora Alfaix Ltda - Principal - Desinsectacion y Desratización',
-        phone: '3204233599',
-        address: '',
-        type: 'DE y DE',
-        status: 'Creado',
-        paymentStatus: '',
-    },
-];
+    useEffect(() => {
+        const loadTodayServices = async () => {
+            try {
+                setIsLoading(true);
+                setErrorMessage('');
 
-    const sortedServices = [...services].sort(
-        (a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime()
+                const response = await getTodayServicesByEmployee(1091);
+
+                setServices(response);
+
+                console.log(
+                    'Servicios obtenidos:',
+                    response
+                );
+            } catch (error) {
+                console.error(
+                    'Error al consultar los servicios:',
+                    error
+                );
+
+                setErrorMessage(
+                    'No fue posible cargar los servicios.'
+                );
+
+                Alert.alert(
+                    'Error',
+                    'No fue posible consultar los servicios asignados.'
+                );
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadTodayServices();
+    }, []);
+
+
+    const sortedServices = [...services].sort((a, b) => {
+    const firstDate = new Date(
+        `${a.initial_date}T${a.initial_hour}`
     );
+
+    const secondDate = new Date(
+        `${b.initial_date}T${b.initial_hour}`
+    );
+
+    return firstDate.getTime() - secondDate.getTime();
+});
 
     const formatDate = (date: Date) => {
         return date.toISOString().split('T')[0];
     };
 
     const filteredServices = sortedServices.filter((service) => {
-        const serviceDate = formatDate(new Date(service.fullDate));
         const selected = formatDate(selectedDate);
 
-        return serviceDate === selected;
+        return service.initial_date === selected;
     });
 
     return (
@@ -165,28 +175,61 @@ const services = [
     </View>
 
     <ScrollView>
-            {filteredServices.length > 0 ? (
-                filteredServices.map((service) => (
+        {isLoading ? (
+            <View style={styles.emptyContainer}>
+                <ActivityIndicator
+                    size="large"
+                    color="#1D98D1"
+                />
+
+                <Text style={styles.emptyText}>
+                    Cargando servicios...
+                </Text>
+            </View>
+        ) : errorMessage ? (
+            <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                    {errorMessage}
+                </Text>
+            </View>
+        ) : filteredServices.length > 0 ? (
+            filteredServices.map((service) => (
+                <View key={service.id}>
                     <ServiceCard
-                        key={service.id}
+                        id={service.id}
+                        serviceOrder={service.id_service_order ?? ''}
                         date={service.date}
-                        time={service.time}
+                        time={service.hour}
+                        finalHour={service.final_hour ?? ''}
                         title={service.title}
-                        phone={service.phone}
-                        address={service.address}
-                        type={service.type}
-                        status={service.status}
-                        paymentStatus={service.paymentStatus}
+                        customer={service.customer ?? ''}
+                        contact={service.establishment_name ?? ''}
+                        phone={service.cellphone ?? ''}
+                        address={service.address ?? ''}
+                        city={service.municipality ?? ''}
+                        state={service.state ?? ''}
+                        type={service.plague ?? ''}
+                        plagues={service.plagues_quote ?? ''}
+                        conditions={service.conditions ?? ''}
+                        inhabitants={service.inhabitants ?? ''}
+                        mascots={service.mascots ?? ''}
+                        status={service.etiqueta ?? ''}
+                        paymentStatus={service.etiqueta_payment ?? ''}
+                        observations={service.observations ?? ''}
+                        technician={service.technician ?? ''}
+                        scheduledBy={service.user_schedule_service ?? ''}
+                        total={service.totalC ?? ''}
                     />
-                ))
-            ) : (
-                <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>
-                        No hay servicios para este día
-                    </Text>
                 </View>
-            )}
-        </ScrollView>
+            ))
+        ) : (
+            <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                    No hay servicios para este día
+                </Text>
+            </View>
+        )}
+    </ScrollView>
 
         <BottomMenu active="services" />
     </View>
@@ -194,23 +237,53 @@ const services = [
     }
 
     function ServiceCard({
+    id,
+    serviceOrder,
     date,
     time,
+    finalHour,
     title,
+    customer,
+    contact,
     phone,
     address,
+    city,
+    state,
     type,
+    plagues,
+    conditions,
+    inhabitants,
+    mascots,
     status,
     paymentStatus,
+    observations,
+    technician,
+    scheduledBy,
+    total,
 }: {
+    id: number;
+    serviceOrder: string;
     date: string;
     time: string;
+    finalHour: string;
     title: string;
+    customer: string;
+    contact: string;
     phone: string;
     address: string;
+    city: string;
+    state: string;
     type: string;
+    plagues: string;
+    conditions: string;
+    inhabitants: string;
+    mascots: string;
     status: string;
     paymentStatus: string;
+    observations: string;
+    technician: string;
+    scheduledBy: string;
+    total: string;
 }) {
     const getStatusColor = () => {
         if (status === 'Finalizado') return '#0F6E31';
@@ -223,8 +296,37 @@ const services = [
     return (
         <TouchableOpacity
             style={styles.card}
-            onPress={() => router.push('/service-detail')}
-        >
+                onPress={() =>
+                    router.push({
+                        pathname: '/service-detail',
+                        params: {
+                            serviceId: id.toString(),
+                            serviceOrder,
+                            date,
+                            time,
+                            finalHour,
+                            title,
+                            customer,
+                            contact,
+                            phone,
+                            address,
+                            city,
+                            state,
+                            type,
+                            plagues,
+                            conditions,
+                            inhabitants,
+                            mascots,
+                            status,
+                            paymentStatus,
+                            observations,
+                            technician,
+                            scheduledBy,
+                            total,
+                        },
+                    })
+                }
+            >
             <View style={[styles.dateSection, { backgroundColor: statusColor }]}>
                 <Text style={styles.date}>{date}</Text>
                 <Text style={styles.time}>{time}</Text>

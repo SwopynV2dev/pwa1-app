@@ -1,7 +1,52 @@
-import {View,Text,StyleSheet,TextInput,TouchableOpacity,} from 'react-native';
+import { useState } from 'react';
+import {View,Text,StyleSheet,TextInput,TouchableOpacity,Alert,ActivityIndicator,} from 'react-native';
 import { router } from 'expo-router';
+import { login } from '../api/authService';
 
     export default function Login() {
+        const [username, setUsername] = useState('');
+        const [password, setPassword] = useState('');
+        const [isLoading, setIsLoading] = useState(false);
+
+        const handleLogin = async () => {
+            if (!username.trim() || !password.trim()) {
+                Alert.alert(
+                    'Datos incompletos',
+                    'Ingresa tu correo electrónico y contraseña.'
+                );
+                return;
+            }
+
+            try {
+                setIsLoading(true);
+
+                const response = await login({
+                    Username: username.trim(),
+                    Password: password,
+                });
+
+                if (response.loginCode !== 1) {
+                    Alert.alert(
+                        'Inicio de sesión incorrecto',
+                        'No se pudo iniciar sesión con los datos proporcionados.'
+                    );
+                    return;
+                }
+
+                console.log('Login correcto:', response);
+
+                router.replace('/services');
+            } catch (error) {
+                console.error('Error al iniciar sesión:', error);
+
+                Alert.alert(
+                    'Error de conexión',
+                    'No fue posible iniciar sesión. Verifica tu conexión y vuelve a intentarlo.'
+                );
+            } finally {
+                setIsLoading(false);
+            }
+        };
     return (
         <View style={styles.container}>
         <View style={styles.header}>
@@ -16,22 +61,41 @@ import { router } from 'expo-router';
             <Text style={styles.title}>¡Bienvenido!</Text>
 
             <TextInput
-            placeholder="Correo electrónico"
-            style={styles.input}
+                placeholder="Correo electrónico"
+                style={styles.input}
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
             />
 
             <TextInput
-            placeholder="Contraseña"
-            secureTextEntry
-            style={styles.input}
+                placeholder="Contraseña"
+                secureTextEntry
+                style={styles.input}
+                value={password}
+                onChangeText={setPassword}
+                autoCapitalize="none"
             />
 
             <Text style={styles.forgotPassword}>¿Olvidaste tu contraseña?</Text>
 
-            <TouchableOpacity style={styles.loginButton}
-                onPress={() => router.push('/services')}
+            <TouchableOpacity
+                style={[
+                    styles.loginButton,
+                    isLoading && styles.loginButtonDisabled,
+                ]}
+                onPress={handleLogin}
+                disabled={isLoading}
             >
-            <Text style={styles.loginButtonText}>›  INICIAR SESIÓN</Text>
+                {isLoading ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                    <Text style={styles.loginButtonText}>
+                        › INICIAR SESIÓN
+                    </Text>
+                )}
             </TouchableOpacity>
         </View>
 
@@ -170,5 +234,9 @@ import { router } from 'expo-router';
         fontSize: 16,
         fontWeight: 'bold',
         letterSpacing: 2,
+    },
+
+    loginButtonDisabled: {
+        opacity: 0.7,
     },
     });

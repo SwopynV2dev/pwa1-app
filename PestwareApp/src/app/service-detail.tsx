@@ -1,33 +1,43 @@
 import {View,Text,StyleSheet,ScrollView,TouchableOpacity, Linking} from 'react-native';
 import { router } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 
 export default function ServiceDetail() {
 
-    const service = {
-        date: 'Jun 03',
-        hour: '08:00 am',
-        serviceNumber: 'OS-7922-5',
-        customer: 'Molinos San Miguel',
-        contact: 'Osmari Cortez',
-        phone: '3011565483',
-        status: 'pending',
-        address: 'Molinos San Miguel 00, Zona franca Tayrona',
-        city: 'Magdalena, Santa Marta',
-        serviceType: 'DCO',
-        plagues: 'Rata Alcantarilla, Rata de tejado, Ratones, Serpientes',
-        diseases: '',
-        pets: '',
-        comments:
-        'Servicio de Desratización y control de ofidios más revisión de lámparas UV.\n\nDesratización una vez por semana.\n\nLimpieza y cambio de láminas lámparas UV una vez por semana.\n\nControl de Ofidio cada 15 días dos veces al mes.',
-        agent: 'Elsa Bolaños',
-    };
+    const {
+    serviceId,
+    serviceOrder,
+    title,
+    customer,
+    contact,
+    phone,
+    address,
+    city,
+    state,
+    type,
+    plagues,
+    conditions,
+    inhabitants,
+    mascots,
+    status,
+    paymentStatus,
+    observations,
+    technician,
+    scheduledBy,
+    total,
+    date,
+    time,
+    finalHour,
+} = useLocalSearchParams();
 
     const callPhone = () => {
-    Linking.openURL(`tel:${service.phone}`);
+        if (phone) {
+            Linking.openURL(`tel:${phone}`);
+        }
     };
 
     const openMaps = () => {
-        const fullAddress = `${service.address}, ${service.city}`;
+        const fullAddress = `${address}`;
         const encodedAddress = encodeURIComponent(fullAddress);
 
         Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`);
@@ -47,55 +57,60 @@ export default function ServiceDetail() {
 
             <View style={styles.topInfo}>
                 <View>
-                    <Text style={styles.date}>{service.date}</Text>
-                    <Text style={styles.hour}>{service.hour}</Text>
+                    <Text style={styles.date}>
+                        {date}
+                    </Text>
+
+                    <Text style={styles.hour}>
+                        {time}
+                    </Text>
                 </View>
 
                 <View style={styles.serviceNumberContainer}>
                     <Text style={styles.serviceLabel}># Servicio</Text>
                     <Text style={styles.serviceNumber}>
-                    {service.serviceNumber}
+                    {serviceOrder || serviceId}
                     </Text>
                 </View>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.customer}>
-                    {service.customer}
+                    {customer}
                 </Text>
 
                 <Text style={styles.contact}>
-                    {service.contact}
+                    {contact}
                 </Text>
             </View>
 
             <View style={styles.section}>
                 <TouchableOpacity onPress={callPhone}>
                     <Text style={styles.phone}>
-                        {service.phone}
+                        {phone}
                     </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={openMaps}>
                     <Text style={styles.address}>
-                        {service.address}
+                        {address}
                     </Text>
                 </TouchableOpacity>
 
                 <Text style={styles.city}>
-                    {service.city}
+                    {city}, {state}
                 </Text>
             </View>
 
             <View style={styles.centerSection}>
                 <Text style={styles.serviceType}>
-                    {service.serviceType}
+                    {type}
                 </Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.plagues}>
-                    {service.plagues}
+                    {plagues}
                 </Text>
             </View>
 
@@ -105,11 +120,15 @@ export default function ServiceDetail() {
                 </Text>
 
                 <Text style={styles.normalText}>
-                    Enfermedades:
+                    Enfermedades: {conditions || 'Sin información'}
                 </Text>
 
                 <Text style={styles.normalText}>
-                    Mascotas:
+                    Habitantes: {inhabitants || 'Sin información'}
+                </Text>
+
+                <Text style={styles.normalText}>
+                    Mascotas: {mascots || 'Sin información'}
                 </Text>
             </View>
 
@@ -119,7 +138,7 @@ export default function ServiceDetail() {
                 </Text>
 
                 <Text style={styles.comments}>
-                    {service.comments}
+                    {observations}
                 </Text>
             </View>
 
@@ -129,14 +148,14 @@ export default function ServiceDetail() {
                 </Text>
 
                 <Text style={styles.agent}>
-                    {service.agent}
+                    {technician}
                 </Text>
             </View>
 
         </ScrollView>
 
         <View style={styles.bottomButtons}>
-            {service.status === 'completed' ? (
+            {status === 'Finalizado' ? (
                 <>
                 <TouchableOpacity style={styles.secondaryButton}>
                     <Text style={styles.secondaryButtonText}>ORDEN DE SERV.</Text>

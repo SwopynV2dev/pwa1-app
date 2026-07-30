@@ -1,20 +1,25 @@
-const BASE_URL = "";
+const BASE_URL = 'https://pestwareapp.com';
 
-export async function apiRequest(
+export async function apiRequest<T>(
     endpoint: string,
     options: RequestInit = {}
-) {
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
-        headers: {
-            "Content-Type": "application/json",
-            ...options.headers,
-        },
-        ...options,
-    });
+): Promise<T> {
+    const response = await fetch(
+        `${BASE_URL}${endpoint}`,
+        {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers,
+            },
+        }
+    );
 
     if (!response.ok) {
-        throw new Error(`Error ${response.status}`);
+        throw new Error(
+            `Error HTTP ${response.status}`
+        );
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
 }

@@ -4,9 +4,9 @@ import { initDatabase } from "../database/initDatabase";
 
 export default function RootLayout() {
 
-//  useEffect(() => {
-//    initDatabase();
-//  }, []);
+  useEffect(() => {
+    initDatabase();
+  }, []);
 
   return (
     <Stack screenOptions={{ headerShown: false }} />
